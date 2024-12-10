@@ -54,7 +54,8 @@ public class ModsTab : BaseTab {
     private void OnModsLoaded() {
         if (_modListView!.InvokeRequired) {
             _modListView.Invoke(RefreshModList);
-        } else {
+        }
+        else {
             RefreshModList();
         }
     }
@@ -63,7 +64,7 @@ public class ModsTab : BaseTab {
         if (_mainContainer == null) return;
 
         var installPath = SettingsHolder.InstallPath;
-        
+
         if (string.IsNullOrEmpty(installPath)) {
             ShowMessage("Head to Settings to specify the install path.", false);
             return;
@@ -71,7 +72,9 @@ public class ModsTab : BaseTab {
 
         var modsPath = Path.Combine(installPath, "Mods");
         if (!Directory.Exists(modsPath)) {
-            ShowMessage("P2ModLoader has not been initialized in this directory yet. Press \"Initialize\" to generate the necessary folders.", true);
+            ShowMessage(
+                "P2ModLoader has not been initialized in this directory yet. Press \"Initialize\" to generate the necessary folders.",
+                true);
             return;
         }
 
@@ -87,7 +90,7 @@ public class ModsTab : BaseTab {
 
         _messageLabel!.Text = message;
         _initializeButton!.Visible = showButton;
-        
+
         _mainContainer.Controls.Add(_messageContainer, 0, 0);
         _mainContainer.ResumeLayout();
     }
@@ -97,7 +100,7 @@ public class ModsTab : BaseTab {
 
         _mainContainer.SuspendLayout();
         _mainContainer.Controls.Clear();
-        
+
         var container = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -108,10 +111,10 @@ public class ModsTab : BaseTab {
         container.RowStyles.Add(new RowStyle(SizeType.Percent, 30F));
 
         var descriptionContainer = CreateDescriptionContainer();
-        
+
         container.Controls.Add(_modListView, 0, 0);
         container.Controls.Add(descriptionContainer, 0, 1);
-        
+
         _mainContainer.Controls.Add(container, 0, 0);
         _mainContainer.ResumeLayout();
     }
@@ -176,7 +179,7 @@ public class ModsTab : BaseTab {
             MultiSelect = false,
             HeaderStyle = ColumnHeaderStyle.Nonclickable
         };
-        
+
         _modListView.Columns.Add("Mod Name", -1);
         _modListView.Columns.Add("Author", -1);
         _modListView.Columns.Add("Version", -1);
@@ -204,13 +207,13 @@ public class ModsTab : BaseTab {
         };
         descriptionContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 45));
         descriptionContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-        
+
         var buttonPanel = new FlowLayoutPanel {
             Dock = DockStyle.Fill,
             Height = 45,
             FlowDirection = FlowDirection.LeftToRight
         };
-        
+
         var refreshButton = new Button {
             Text = "Refresh Available Mods",
             Width = 220,
@@ -225,21 +228,28 @@ public class ModsTab : BaseTab {
             SettingsHolder.IsPatched = tempIsPatched;
             SettingsSaver.UnpauseSaving();
         };
-        
+
         var enableAllButton = new Button {
             Text = "Enable All",
             Width = 150,
             Height = 35
         };
         enableAllButton.Click += (_, _) => SetAllModsChecked(true);
-        
+
         var disableAllButton = new Button {
             Text = "Disable All",
             Width = 150,
             Height = 35
         };
         disableAllButton.Click += (_, _) => SetAllModsChecked(false);
-        
+
+        var openModsFolderButton = new Button {
+            Text = "Open Mods folder",
+            Width = 150,
+            Height = 35
+        };
+        openModsFolderButton.Click += (_, _) => OpenModsFolder();
+
         _descriptionBox = new NoCaretTextBox {
             Dock = DockStyle.Fill,
             Multiline = true,
@@ -253,6 +263,7 @@ public class ModsTab : BaseTab {
         buttonPanel.Controls.Add(refreshButton);
         buttonPanel.Controls.Add(disableAllButton);
         buttonPanel.Controls.Add(enableAllButton);
+        buttonPanel.Controls.Add(openModsFolderButton);
         descriptionContainer.Controls.Add(buttonPanel, 0, 0);
         descriptionContainer.Controls.Add(_descriptionBox, 0, 1);
 
@@ -264,10 +275,10 @@ public class ModsTab : BaseTab {
 
         try {
             _isRefreshing = true;
-            
+
             foreach (ListViewItem item in _modListView.Items) {
                 if (item.Tag is not Mod mod) continue;
-                
+
                 item.Checked = value;
                 mod.IsEnabled = value;
                 RefreshItem(item);
@@ -279,6 +290,11 @@ public class ModsTab : BaseTab {
         finally {
             _isRefreshing = false;
         }
+    }
+
+    private void OpenModsFolder() {
+        var mods = Path.Join(SettingsHolder.InstallPath, "Mods");
+        Process.Start("explorer.exe", mods);
     }
 
     private void InitializeButton_Click(object? sender, EventArgs e) {
@@ -319,7 +335,7 @@ public class ModsTab : BaseTab {
         // Very dirty workaround to prevent isPatched being set to false during init.
         if (Environment.StackTrace.Contains("CreateControl"))
             return;
-        
+
         mod.IsEnabled = e.Item.Checked;
         RefreshItem(e.Item);
         SettingsHolder.UpdateModState(ModManager.Mods);
@@ -347,7 +363,8 @@ public class ModsTab : BaseTab {
                 otherItem.BackColor = dependency2.HasErrors ? dependency2.DisplayColor : conflict2.BackgroundColor;
                 otherMod.DependencyError = dependency2.HasErrors ? dependency2.ErrorMessage : string.Empty;
             }
-        } finally {
+        }
+        finally {
             _isRefreshing = false;
         }
     }
@@ -363,7 +380,8 @@ public class ModsTab : BaseTab {
             _modListView.Items.Clear();
             _modListView.Items.AddRange(currentItems);
             _modListView.EndUpdate();
-        } finally {
+        }
+        finally {
             _isRefreshing = false;
         }
     }

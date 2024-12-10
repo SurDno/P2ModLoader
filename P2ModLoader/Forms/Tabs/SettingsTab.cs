@@ -68,7 +68,7 @@ public class SettingsTab : BaseTab {
         _checkForUpdatesCheckBox.CheckedChanged += (_, _) => {
             SettingsHolder.CheckForUpdatesOnStartup = _checkForUpdatesCheckBox!.Checked;
         };
-
+    
         Tab.Controls.AddRange([
             pathLabel,
             _pathTextBox,
