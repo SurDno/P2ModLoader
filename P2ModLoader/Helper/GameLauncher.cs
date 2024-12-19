@@ -75,7 +75,7 @@ namespace P2ModLoader.Helper {
             
             var steamProcess = new ProcessStartInfo {
                 FileName = Path.Combine(InstallationLocator.FindSteam()!, InstallationLocator.STEAM_EXE),
-                Arguments = "-applaunch 505230 -StraightIntoFreemode"
+                Arguments = "-applaunch 505230"
             };
 
             Process.Start(steamProcess);
