@@ -123,7 +123,7 @@ public partial class MainForm : Form {
             
         _patchButton!.Enabled = !shouldDisableButtons && !SettingsHolder.IsPatched;
         _launchExeButton!.Enabled = !shouldDisableButtons;
-        _launchSteamButton!.Enabled = !shouldDisableButtons;
+        _launchSteamButton!.Enabled = !shouldDisableButtons && InstallationLocator.FindSteam() != null;
         _patchButton.Text = hasMods ? "Patch" : "Restore Default";
         _launchExeButton.Text = SettingsHolder.IsPatched ? "Launch.exe" : "Patch + Launch .exe";
         _launchSteamButton.Text = SettingsHolder.IsPatched ? "Launch in Steam" : "Patch + Launch in Steam";
