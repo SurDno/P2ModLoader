@@ -15,12 +15,13 @@ namespace P2ModLoader.AssemblyPatching;
 
 public static class AssemblyPatcher {
     public static bool PatchAssembly(string dllPath, string updatedSourcePath) {
+        var dllDirectory = Path.GetDirectoryName(Path.GetFullPath(dllPath))!;
+        var fileCopy = Path.Combine(dllDirectory, $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
+        File.Copy(dllPath, fileCopy, true);
+        var backupPath = dllPath + ".backup";
+        
         try {
-            var dllDirectory = Path.GetDirectoryName(Path.GetFullPath(dllPath));
-            var fileCopy = Path.Combine(Path.GetDirectoryName(dllPath), $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
-            File.Copy(dllPath, fileCopy, true);
-
-            var references = ReferenceCollector.CollectReferences(dllDirectory, dllPath, fileCopy);
+            var references = ReferenceCollector.CollectReferences(dllDirectory!, dllPath);
 
             var updatedSource = File.ReadAllText(updatedSourcePath);
             var updatedTree = CSharpSyntaxTree.ParseText(updatedSource, new CSharpParseOptions(LanguageVersion.Latest));
@@ -29,6 +30,7 @@ public static class AssemblyPatcher {
             var classDeclarations = updatedRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
             var enumDeclarations = updatedRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
             var methodDeclarations = updatedRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+            var propertyDeclarations = updatedRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
 
             var hasClass = classDeclarations.Count != 0;
             var hasEnum = enumDeclarations.Count != 0;
@@ -56,10 +58,8 @@ public static class AssemblyPatcher {
                 AssemblyResolver = resolver,
                 ReadWrite = true
             };
-
-            var backupPath = dllPath + ".backup";
-            if (File.Exists(backupPath)) File.Delete(backupPath);
-            File.Copy(dllPath, backupPath);
+            
+            File.Copy(dllPath, backupPath, true);
 
             using var originalAssembly = AssemblyDefinition.ReadAssembly(backupPath, readerParams);
 
@@ -73,7 +73,7 @@ public static class AssemblyPatcher {
 
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
                 if (originalType == null) {
-                    if (!AddNewType(references, namespaceDecl, enumDecl, originalAssembly, readerParams))
+                    if (!TryAddNewType(references, namespaceDecl, enumDecl, originalAssembly, readerParams))
                         return false;
 
                     Logger.LogInfo($"Added new enum {fullTypeName}.");
@@ -93,20 +93,22 @@ public static class AssemblyPatcher {
                     ? classDecl.Identifier.Text
                     : $"{namespaceName}.{classDecl.Identifier.Text}";
                 var methodsForClass = methodDeclarations.ToList();
+                var propertiesForClass = propertyDeclarations.ToList();
+
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
 
                 if (originalType == null) {
-                    if (!AddNewType(references, namespaceDecl, classDecl, originalAssembly, readerParams))
+                    Logger.LogInfo($"Adding new type {fullTypeName}.");
+                    if (!TryAddNewType(references, namespaceDecl, classDecl, originalAssembly, readerParams))
                         return false;
-                    Logger.LogInfo($"Added new type {fullTypeName}.");
                 } else {
-                    if (methodsForClass.Count != 0) {
-                        if (!UpdateClassTypeWithMethods(decompiler, originalAssembly, fullTypeName, namespaceDecl,
-                                classDecl, methodsForClass, updatedRoot, references, readerParams))
+                    if (methodsForClass.Count != 0 || propertiesForClass.Count != 0) {
+                        Logger.LogInfo($"Updating class {fullTypeName} with new/changed members.");
+                        if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, namespaceDecl,
+                                classDecl, methodsForClass, propertiesForClass, updatedRoot, references, readerParams))
                             return false;
-                        Logger.LogInfo($"Updated class {fullTypeName} with new/changed methods.");
                     } else {
-                        Logger.LogInfo($"Class {fullTypeName} found but no methods to replace.");
+                        Logger.LogInfo($"Class {fullTypeName} found but no methods or properties to replace.");
                     }
                 }
             }
@@ -117,10 +119,13 @@ public static class AssemblyPatcher {
         } catch (Exception ex) {
             ErrorHandler.Handle("Error patching assembly", ex);
             return false;
+        } finally {
+            File.Delete(fileCopy);
+            File.Delete(backupPath);
         }
     }
 
-    private static bool AddNewType(List<MetadataReference> references, NamespaceDeclarationSyntax? namespaceDecl,
+    private static bool TryAddNewType(List<MetadataReference> references, NamespaceDeclarationSyntax? namespaceDecl,
         MemberDeclarationSyntax typeDecl, AssemblyDefinition originalAssembly, ReaderParameters readerParams) {
         var compilationUnit = SyntaxFactory.CompilationUnit();
         var updatedRoot = typeDecl.SyntaxTree.GetRoot();
@@ -134,7 +139,7 @@ public static class AssemblyPatcher {
         } else {
             compilationUnit = compilationUnit.WithMembers(SyntaxFactory.SingletonList(typeDecl));
         }
-        
+
         var syntaxTree = compilationUnit.SyntaxTree;
 
         var compilation = CSharpCompilation.Create(
@@ -159,7 +164,7 @@ public static class AssemblyPatcher {
         using var newAssembly =
             AssemblyDefinition.ReadAssembly(new MemoryStream(ms.ToArray()), readerParams);
 
-        string fullTypeName = GetFullTypeName(namespaceDecl, typeDecl);
+        var fullTypeName = GetFullTypeName(namespaceDecl, typeDecl);
 
         var newType = newAssembly.MainModule.GetType(fullTypeName);
         if (newType == null) {
@@ -174,23 +179,24 @@ public static class AssemblyPatcher {
     }
 
     private static string GetFullTypeName(NamespaceDeclarationSyntax? nsDecl, MemberDeclarationSyntax typeDecl) {
-        string namespaceName = nsDecl?.Name.ToString() ?? "";
-        string typeName = "";
-        if (typeDecl is ClassDeclarationSyntax c)
-            typeName = c.Identifier.Text;
-        else if (typeDecl is EnumDeclarationSyntax e)
-            typeName = e.Identifier.Text;
+        var namespaceName = nsDecl?.Name.ToString() ?? "";
+        var typeName = typeDecl switch {
+            ClassDeclarationSyntax c => c.Identifier.Text,
+            EnumDeclarationSyntax e => e.Identifier.Text,
+            _ => ""
+        };
 
         return string.IsNullOrEmpty(namespaceName) ? typeName : $"{namespaceName}.{typeName}";
     }
 
-    private static bool UpdateClassTypeWithMethods(
+    private static bool TryUpdateClassTypeMembers(
         CSharpDecompiler decompiler,
         AssemblyDefinition originalAssembly,
         string fullTypeName,
         NamespaceDeclarationSyntax? namespaceDecl,
         ClassDeclarationSyntax classDecl,
         List<MethodDeclarationSyntax> methodGroup,
+        List<PropertyDeclarationSyntax> propertyGroup,
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
         ReaderParameters readerParams) {
@@ -198,20 +204,16 @@ public static class AssemblyPatcher {
         try {
             decompiledSource = decompiler.DecompileTypeAsString(new FullTypeName(fullTypeName));
         } catch (Exception ex) {
-            ErrorHandler.Handle($"Failed to decompile type {fullTypeName}: {ex.Message}", null);
+            ErrorHandler.Handle($"Failed to decompile type {fullTypeName}", ex);
             return false;
         }
 
         var decompTree = CSharpSyntaxTree.ParseText(decompiledSource);
 
-        var decompRoot = decompTree.GetRoot() as CompilationUnitSyntax;
-
-        if (decompRoot == null) {
+        if (decompTree.GetRoot() is not CompilationUnitSyntax decompRoot) {
             ErrorHandler.Handle("Failed to parse decompiled source.", null);
             return false;
         }
-
-        var mergedUsings = ReferenceCollector.MergeUsings(decompRoot, updatedRoot);
 
         var decompClass = FindTypeDeclaration<ClassDeclarationSyntax>(decompRoot, classDecl.Identifier.Text);
 
@@ -220,28 +222,43 @@ public static class AssemblyPatcher {
             return false;
         }
 
-        var rewriter = new MethodReplacer(methodGroup.ToDictionary(
-            m => m.Identifier.Text,
-            m => m
-        ));
+        var methodReplacements = methodGroup.Select(m => new MethodReplacement(
+            m.Identifier.Text,
+            m.ParameterList.Parameters.Select(p => p.Type.ToString()).ToList(),
+            m
+        )).ToList();
 
-        var modifiedClass = rewriter.Visit(decompClass) as ClassDeclarationSyntax;
-        if (modifiedClass == null) {
-            ErrorHandler.Handle("Failed to modify class with new methods.", null);
+
+        var duplicateMethods = methodReplacements
+            .GroupBy(m => new { m.Name, Types = string.Join(",", m.Types) })
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateMethods.Count != 0) {
+            foreach (var dup in duplicateMethods) {
+                ErrorHandler.Handle(
+                    $"Duplicate method definition detected in updated source: {dup.Name} with parameters ({dup.Types})",
+                    null);
+            }
+
             return false;
         }
+
+        var methodRewriter = new MethodReplacer(methodReplacements);
+        var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass);
 
         CompilationUnitSyntax mergedRoot;
         if (namespaceDecl != null) {
             var mergedNamespace = SyntaxFactory.NamespaceDeclaration(namespaceDecl.Name)
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass));
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass ?? decompClass));
             mergedRoot = SyntaxFactory.CompilationUnit()
-                .WithUsings(mergedUsings)
+                .WithUsings(ReferenceCollector.MergeUsings(decompRoot, updatedRoot))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(mergedNamespace));
         } else {
             mergedRoot = SyntaxFactory.CompilationUnit()
-                .WithUsings(mergedUsings)
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass));
+                .WithUsings(ReferenceCollector.MergeUsings(decompRoot, updatedRoot))
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass ?? decompClass));
         }
 
         var mergedSource = mergedRoot.NormalizeWhitespace().ToFullString();
@@ -267,7 +284,6 @@ public static class AssemblyPatcher {
         ms.Seek(0, SeekOrigin.Begin);
 
         using var newAssembly = AssemblyDefinition.ReadAssembly(new MemoryStream(ms.ToArray()), readerParams);
-
         var newType = newAssembly.MainModule.GetType(fullTypeName);
 
         if (newType == null) {
@@ -276,6 +292,10 @@ public static class AssemblyPatcher {
         }
 
         var originalType = originalAssembly.MainModule.GetType(fullTypeName);
+        if (originalType == null) {
+            ErrorHandler.Handle($"Original type {fullTypeName} not found.", null);
+            return false;
+        }
 
         foreach (var methodName in methodGroup.Select(m => m.Identifier.Text)) {
             var newMethod = newType.Methods.FirstOrDefault(m => m.Name == methodName);
@@ -297,6 +317,52 @@ public static class AssemblyPatcher {
             }
         }
 
+        foreach (var propDecl in propertyGroup) {
+            var propName = propDecl.Identifier.Text;
+
+            var newProp = newType.Properties.FirstOrDefault(p => p.Name == propName);
+            var originalProp = originalType.Properties.FirstOrDefault(p => p.Name == propName);
+
+            if (newProp == null) {
+                Logger.LogWarning($"Could not find property {propName} in the compiled assembly");
+                continue;
+            }
+
+            if (originalProp == null) {
+                Logger.LogInfo($"Adding new property {propName} to type {fullTypeName}");
+                var importedProperty = CloneCreator.CloneProperty(newProp, originalAssembly.MainModule, originalType);
+                originalType.Properties.Add(importedProperty);
+                Logger.LogInfo($"Added new property {propName}");
+            } else {
+                originalProp.PropertyType = originalAssembly.MainModule.ImportReference(newProp.PropertyType);
+                CloneCreator.CloneAttributes(newProp, originalProp, originalAssembly.MainModule);
+
+                if (newProp.GetMethod != null) {
+                    if (originalProp.GetMethod == null) {
+                        Logger.LogInfo($"Original property {propName} had no get accessor, adding it.");
+                        var importedGet = CloneCreator.CloneMethod(newProp.GetMethod, originalAssembly.MainModule);
+                        originalType.Methods.Add(importedGet);
+                        originalProp.GetMethod = importedGet;
+                    } else {
+                        ReplaceMethodBody(originalProp.GetMethod, newProp.GetMethod, originalAssembly.MainModule);
+                        Logger.LogInfo($"Replaced get accessor of property {propName}");
+                    }
+                }
+
+                if (newProp.SetMethod != null) {
+                    if (originalProp.SetMethod == null) {
+                        Logger.LogInfo($"Original property {propName} had no set accessor, adding it.");
+                        var importedSet = CloneCreator.CloneMethod(newProp.SetMethod, originalAssembly.MainModule);
+                        originalType.Methods.Add(importedSet);
+                        originalProp.SetMethod = importedSet;
+                    } else {
+                        ReplaceMethodBody(originalProp.SetMethod, newProp.SetMethod, originalAssembly.MainModule);
+                        Logger.LogInfo($"Replaced set accessor of property {propName}");
+                    }
+                }
+            }
+        }
+
         return true;
     }
 
@@ -313,6 +379,27 @@ public static class AssemblyPatcher {
         return null;
     }
 
+    private class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharpSyntaxRewriter {
+        public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) {
+            foreach (var replacement in methodReplacements) {
+                if (node.Identifier.Text != replacement.Name)
+                    continue;
+
+                var nodeParameterTypes = node.ParameterList.Parameters
+                    .Select(p => p.Type.ToString())
+                    .ToList();
+
+                if (nodeParameterTypes.SequenceEqual(replacement.Types)) {
+                    return replacement.ReplacementMethod
+                        .WithModifiers(node.Modifiers)
+                        .WithAttributeLists(node.AttributeLists);
+                }
+            }
+
+            return node;
+        }
+    }
+
     private static void PrintCompilationFailure(EmitResult result, SyntaxTree tree) {
         Logger.LogError("Compilation failed!");
         foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)) {
@@ -326,17 +413,6 @@ public static class AssemblyPatcher {
             Logger.LogInfo($"Location: {lineSpan}");
             Logger.LogInfo($"Source line: {errorLine}");
             Logger.LogLineBreak();
-        }
-    }
-
-    private class MethodReplacer(Dictionary<string, MethodDeclarationSyntax> methods) : CSharpSyntaxRewriter {
-        public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) {
-            if (methods.TryGetValue(node.Identifier.Text, out var replacementMethod)) {
-                return replacementMethod.WithModifiers(replacementMethod.Modifiers)
-                    .WithAttributeLists(node.AttributeLists);
-            }
-
-            return node;
         }
     }
 

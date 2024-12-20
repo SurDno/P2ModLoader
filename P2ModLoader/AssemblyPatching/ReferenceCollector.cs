@@ -8,15 +8,14 @@ using UsingList = Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CShar
 namespace P2ModLoader.AssemblyPatching;
 
 public static class ReferenceCollector {
-	public static List<MetadataReference> CollectReferences(string dllDirectory, string dllPath, string fileCopy) {
+	public static List<MetadataReference> CollectReferences(string dllDirectory, string dllPath) {
 		var references = new List<MetadataReference>();
 
 		foreach (var file in Directory.GetFiles(dllDirectory, "*.dll")) {
 			var fileName = Path.GetFileName(file);
 			try {
-				var f = !dllPath.Contains(fileName) ? file : fileCopy;
+				if (dllPath.Contains(fileName)) continue;
 				references.Add(MetadataReference.CreateFromFile(file));
-				//Logger.LogInfo($"Potential dependency for patching loaded: {f}");
 			} catch (Exception ex) {
 				Logger.LogWarning($"Could not load local assembly {Path.GetFileName(file)}: {ex.Message}");
 			}

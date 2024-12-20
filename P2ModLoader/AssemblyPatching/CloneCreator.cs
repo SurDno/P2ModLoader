@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -17,12 +18,23 @@ public static class CloneCreator {
                 return Instruction.Create(opcode);
             case TypeReference typeRef:
                 return Instruction.Create(opcode, targetModule.ImportReference(typeRef));
-            // TODO: Now only comparing parameter count, might miss some overloads.
-            case MethodReference methodRef:
+            case MethodReference methodRef:    
                 if (methodRef.DeclaringType.FullName != currentType.FullName)
                     return Instruction.Create(opcode, targetModule.ImportReference(methodRef));
-                var resolvedMethod = currentType.Methods.FirstOrDefault(m =>
-                    m.Name == methodRef.Name && m.Parameters.Count == methodRef.Parameters.Count);
+                var candidates = currentType.Methods
+                    .Where(m => m.Name == methodRef.Name && m.Parameters.Count == methodRef.Parameters.Count);
+                var resolvedMethod = candidates.FirstOrDefault(m =>
+                    m.Parameters.Select(p => new {
+                            Type = p.ParameterType.FullName,
+                            Modifier = p.IsOut ? "out" : p.ParameterType.IsByReference ? "ref" : "in"
+                        })
+                        .SequenceEqual(
+                            methodRef.Parameters.Select(rp => new {
+                                Type = rp.ParameterType.FullName,
+                                Modifier = rp.IsOut ? "out" : rp.ParameterType.IsByReference ? "ref" : "in"
+                            })
+                        )
+                );
                 return Instruction.Create(opcode, targetModule.ImportReference(resolvedMethod ?? methodRef));
             case FieldReference fieldRef:
                 if (fieldRef.DeclaringType.FullName != currentType.FullName)
@@ -111,14 +123,11 @@ public static class CloneCreator {
                 targetModule.ImportReference(property.PropertyType)
             );
 
-            if (property.GetMethod != null) {
+            if (property.GetMethod != null) 
                 newProperty.GetMethod = newType.Methods.FirstOrDefault(m => m.Name == property.GetMethod.Name);
-            }
-
-            if (property.SetMethod != null) {
+            if (property.SetMethod != null)
                 newProperty.SetMethod = newType.Methods.FirstOrDefault(m => m.Name == property.SetMethod.Name);
-            }
-
+                
             newType.Properties.Add(newProperty);
         }
 
@@ -168,48 +177,49 @@ public static class CloneCreator {
             newMethod.Parameters.Add(newParam);
         }
 
-        if (methodToClone.HasBody) {
-            newMethod.Body = new MethodBody(newMethod);
+        if (!methodToClone.HasBody) 
+            return newMethod;
+        
+        newMethod.Body = new MethodBody(newMethod);
 
-            var variableMap = new Dictionary<VariableDefinition, VariableDefinition>();
-            foreach (var variable in methodToClone.Body.Variables) {
-                var newVariable = new VariableDefinition(targetModule.ImportReference(variable.VariableType));
-                newMethod.Body.Variables.Add(newVariable);
-                variableMap[variable] = newVariable;
-            }
+        var variableMap = new Dictionary<VariableDefinition, VariableDefinition>();
+        foreach (var variable in methodToClone.Body.Variables) {
+            var newVariable = new VariableDefinition(targetModule.ImportReference(variable.VariableType));
+            newMethod.Body.Variables.Add(newVariable);
+            variableMap[variable] = newVariable;
+        }
 
-            newMethod.Body.InitLocals = methodToClone.Body.InitLocals;
-            newMethod.Body.MaxStackSize = methodToClone.Body.MaxStackSize;
+        newMethod.Body.InitLocals = methodToClone.Body.InitLocals;
+        newMethod.Body.MaxStackSize = methodToClone.Body.MaxStackSize;
 
-            var ilProcessor = newMethod.Body.GetILProcessor();
-            var instructionMap = new Dictionary<Instruction, Instruction>();
+        var ilProcessor = newMethod.Body.GetILProcessor();
+        var instructionMap = new Dictionary<Instruction, Instruction>();
 
-            var currentType = methodToClone.DeclaringType;
-            foreach (var instruction in methodToClone.Body.Instructions) {
-                var newInstruction = CloneInstruction(instruction, targetModule, variableMap, null, instructionMap,
-                    currentType);
-                instructionMap[instruction] = newInstruction;
-                ilProcessor.Append(newInstruction);
-            }
+        var currentType = methodToClone.DeclaringType;
+        foreach (var instruction in methodToClone.Body.Instructions) {
+            var newInstruction = CloneInstruction(instruction, targetModule, variableMap, null, instructionMap,
+                currentType);
+            instructionMap[instruction] = newInstruction;
+            ilProcessor.Append(newInstruction);
+        }
 
-            foreach (var instruction in newMethod.Body.Instructions) {
-                instruction.Operand = instruction.Operand switch {
-                    Instruction inst when instructionMap.TryGetValue(inst, out var value) => value,
-                    Instruction[] insts => insts.Select(ti => instructionMap.GetValueOrDefault(ti, ti)).ToArray(),
-                    _ => instruction.Operand
-                };
-            }
+        foreach (var instruction in newMethod.Body.Instructions) {
+            instruction.Operand = instruction.Operand switch {
+                Instruction inst when instructionMap.TryGetValue(inst, out var value) => value,
+                Instruction[] insts => insts.Select(ti => instructionMap.GetValueOrDefault(ti, ti)).ToArray(),
+                _ => instruction.Operand
+            };
+        }
 
-            foreach (var handler in methodToClone.Body.ExceptionHandlers) {
-                var newHandler = new ExceptionHandler(handler.HandlerType) {
-                    CatchType = handler.CatchType != null ? targetModule.ImportReference(handler.CatchType) : null,
-                    TryStart = instructionMap[handler.TryStart],
-                    TryEnd = instructionMap[handler.TryEnd],
-                    HandlerStart = instructionMap[handler.HandlerStart],
-                    HandlerEnd = instructionMap[handler.HandlerEnd]
-                };
-                newMethod.Body.ExceptionHandlers.Add(newHandler);
-            }
+        foreach (var handler in methodToClone.Body.ExceptionHandlers) {
+            var newHandler = new ExceptionHandler(handler.HandlerType) {
+                CatchType = handler.CatchType != null ? targetModule.ImportReference(handler.CatchType) : null,
+                TryStart = instructionMap[handler.TryStart],
+                TryEnd = instructionMap[handler.TryEnd],
+                HandlerStart = instructionMap[handler.HandlerStart],
+                HandlerEnd = instructionMap[handler.HandlerEnd]
+            };
+            newMethod.Body.ExceptionHandlers.Add(newHandler);
         }
 
         return newMethod;
@@ -241,5 +251,26 @@ public static class CloneCreator {
 
             target.CustomAttributes.Add(importedAttribute);
         }
+    }
+    
+    [SuppressMessage("ReSharper", "InvertIf")]
+    public static PropertyDefinition CloneProperty(PropertyDefinition prop, ModuleDefinition module, TypeDefinition type) {
+        PropertyDefinition newProperty = new (prop.Name, prop.Attributes, module.ImportReference(prop.PropertyType));
+
+        CloneAttributes(prop, newProperty, module);
+
+        if (prop.GetMethod != null) {
+            var clonedGet = CloneMethod(prop.GetMethod, module);
+            type.Methods.Add(clonedGet);
+            newProperty.GetMethod = clonedGet;
+        }
+
+        if (prop.SetMethod != null) {
+            var clonedSet = CloneMethod(prop.SetMethod, module);
+            type.Methods.Add(clonedSet);
+            newProperty.SetMethod = clonedSet;
+        }
+
+        return newProperty;
     }
 }
