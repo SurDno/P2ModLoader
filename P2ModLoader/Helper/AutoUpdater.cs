@@ -119,22 +119,45 @@ public static partial class AutoUpdater {
         ZipFile.ExtractToDirectory(zipPath, extractPath);
 
         var updateScript = CreateUpdateScript(extractPath);
-        Process.Start(new ProcessStartInfo {
+        var startInfo = new ProcessStartInfo {
             FileName = "cmd.exe",
             Arguments = $"/c {updateScript}",
-            WindowStyle = ProcessWindowStyle.Hidden
-        });
-
-        Environment.Exit(0);
+            WindowStyle = ProcessWindowStyle.Hidden,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+    
+        Logger.LogInfo("Attempting to start update script...");
+        var process = Process.Start(startInfo);
+    
+        await Task.Delay(500);
+        if (process != null) {
+            Logger.LogInfo($"Update script started with PID: {process.Id}.");
+            Environment.Exit(0);
+        } else {
+            Logger.LogError("Failed to start update script.");
+            MessageBox.Show("An update was downloaded but failed to replace the current version automatically." +
+                            $"To update, close P2ModLoader, go to {extractPath} and launch update.bat manually.",
+                            "Auto-update error", MessageBoxButtons.OK);
+        }
     }
 
     private static string CreateUpdateScript(string updatePath) {
         var scriptPath = Path.Combine(UpdateDirectory, "update.bat");
-        var currentExe = Process.GetCurrentProcess().MainModule!.FileName;
+        var currentExe = Environment.ProcessPath;
 
         var script = $"""
                       @echo off
-                      timeout /t 2 /nobreak
+
+                      timeout /t 1 /nobreak > nul
+
+                      :wait_loop
+                      tasklist | find /i "P2ModLoader.exe" > nul
+                      if not errorlevel 1 (
+                          timeout /t 1 > nul
+                          goto wait_loop
+                      )
 
                       rem Delete all files in the main directory except Updates folder
                       for /F "delims=" %%i in ('dir /b "{BaseDirectory}"') do (
