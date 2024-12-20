@@ -8,6 +8,7 @@ public class ModInfo {
 	public string Url { get; private set; } = string.Empty;
 	public List<string> Requirements { get; private set; } = [];
 	public List<string> LoadAfterMods { get; private set; } = []; 
+	public List<string> LoadFirst { get; private set; } = [];
 
 	public static ModInfo FromFile(string filePath) {
 		var info = new ModInfo();
@@ -38,16 +39,20 @@ public class ModInfo {
 					info.Url = value;
 					break;
 				case "requirements":
-					info.Requirements = value.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x))
-						.ToList();
+					info.Requirements = GetList(value);
 					break;
-				case "goesafter":
-					info.LoadAfterMods = value.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x))
-						.ToList();
+				case "goes_after":
+					info.LoadAfterMods = GetList(value);
+					break;
+				case "load_first":
+					info.LoadFirst = GetList(value).Select(x => x.EndsWith(".cs") ? x : x + ".cs").ToList();
 					break;
 			}
 		}
 
 		return info;
 	}
+
+	private static List<string> GetList(string value) =>
+		value.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x)).ToList();
 }

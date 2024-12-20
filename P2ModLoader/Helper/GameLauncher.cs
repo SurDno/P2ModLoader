@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Metadata.Ecma335;
 using P2ModLoader.AssemblyPatching;
+using P2ModLoader.Data;
 using P2ModLoader.ModList;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -39,7 +40,7 @@ namespace P2ModLoader.Helper {
 
                     if (!Directory.Exists(modAssemblyPath)) continue;
                     BackupAssemblies(modAssemblyPath);
-                    var success = UpdateAssemblies(modAssemblyPath, mod.Info.Name);
+                    var success = UpdateAssemblies(modAssemblyPath, mod);
                     if (!success) return false;
                 }
                 
@@ -102,14 +103,13 @@ namespace P2ModLoader.Helper {
             }
         }
 
-        private static bool UpdateAssemblies(string modAssemblyPath, string modName) {
+        private static bool UpdateAssemblies(string modAssemblyPath, Mod mod) {
             var dllFiles = Directory.GetFiles(modAssemblyPath, "*.dll", SearchOption.TopDirectoryOnly);
-            for (int i = 0; i < dllFiles.Length; i++) {
-                var assemblyDll = dllFiles[i];
+            foreach (var assemblyDll in dllFiles) {
                 var assemblyName = Path.GetFileName(assemblyDll);
                 var originalDll = Path.Combine(SettingsHolder.InstallPath!, MANAGED_PATH, assemblyName);
                 File.Copy(assemblyDll, originalDll, true);
-                _progressForm?.UpdateProgress($"Copying assemblies for {modName}: {assemblyName}");
+                _progressForm?.UpdateProgress($"Copying assemblies for {mod.Info.Name}: {assemblyName}");
             }
 
             var assemblies = Directory.GetDirectories(modAssemblyPath);
@@ -118,6 +118,10 @@ namespace P2ModLoader.Helper {
                 var assemblyPath = Path.Combine(SettingsHolder.InstallPath!, MANAGED_PATH, assemblyName) + ".dll";
 
                 var codeFiles = Directory.GetFiles(assembly, "*.cs", SearchOption.AllDirectories).ToList();
+                if (mod.Info.LoadFirst.Count > 0) {
+                    codeFiles = mod.Info.LoadFirst.Select(f => Path.Combine(assembly, f)).Where(File.Exists)
+                        .Concat(codeFiles.Except(mod.Info.LoadFirst.Select(f => Path.Combine(assembly, f)))).ToList();
+                }
                 var pendingFiles = new List<string>(codeFiles);
 
                 do {
@@ -126,7 +130,7 @@ namespace P2ModLoader.Helper {
 
                     foreach (var codeFile in pendingFiles) {
                         _progressForm?.UpdateProgress(
-                            $"Patching {modName}: {assemblyName} with {Path.GetFileName(codeFile)}");
+                            $"Patching {mod.Info.Name}: {assemblyName} with {Path.GetFileName(codeFile)}");
                         bool success = AssemblyPatcher.PatchAssembly(assemblyPath, codeFile);
 
                         if (success) {
@@ -136,15 +140,14 @@ namespace P2ModLoader.Helper {
                         }
                     }
 
-                    if (!progressMade && filesToRetry.Any()) {
-                        var str = filesToRetry.Aggregate("Unable to patch some files:",
-                            (cur, file) => cur + $"- {file}");
+                    if (!progressMade && filesToRetry.Count != 0) {
+                        var str = filesToRetry.Aggregate("Unable to patch some files:", (cur, f) => cur + $"- {f}");
                         ErrorHandler.Handle(str, null);
                         return false;
                     }
 
                     pendingFiles = filesToRetry;
-                } while (pendingFiles.Any());
+                } while (pendingFiles.Count != 0);
             }
 
             
