@@ -1,5 +1,3 @@
-using System.Windows.Forms;
-
 namespace P2ModLoader.Forms;
 
 public class ProgressForm : Form {

@@ -2,10 +2,9 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using P2ModLoader.Helper;
-
 using UsingList = Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.UsingDirectiveSyntax>;
 
-namespace P2ModLoader.AssemblyPatching;
+namespace P2ModLoader.Patching.Assembly;
 
 public static class ReferenceCollector {
 	public static List<MetadataReference> CollectReferences(string dllDirectory, string dllPath) {

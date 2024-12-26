@@ -31,9 +31,9 @@ public static class BackupManager {
 		return true;
 	}
 	
-	public static void CreateBackup(string filePath) {
+	public static string? CreateBackup(string filePath) {
 		if (SettingsHolder.InstallPath == null)
-			return;
+			return null;
 		
 		if (!Directory.Exists(BackupFolderPath))
 			Directory.CreateDirectory(BackupFolderPath);
@@ -46,5 +46,15 @@ public static class BackupManager {
 		// Never overwrite existing backups if two mods modify the same file.
 		if(!File.Exists(backupPath))
 			File.Copy(filePath, backupPath, false);
+
+		return backupPath;
+	}
+	
+	public static string? GetBackupPath(string filePath) {
+		if (SettingsHolder.InstallPath == null)
+			return null;
+        
+		var backupPath = Path.Combine(BackupFolderPath, Path.GetRelativePath(SettingsHolder.InstallPath, filePath));
+		return File.Exists(backupPath) ? backupPath : null;
 	}
 }

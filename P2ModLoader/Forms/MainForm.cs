@@ -1,7 +1,7 @@
-using System.Reflection;
 using P2ModLoader.Forms.Tabs;
 using P2ModLoader.Helper;
 using P2ModLoader.ModList;
+using P2ModLoader.Patching;
 
 namespace P2ModLoader.Forms;
 
@@ -70,7 +70,7 @@ public partial class MainForm : Form {
 
         _patchButton = NewButton();
         _patchButton.Click += (_, _) => {
-            GameLauncher.TryPatch();
+            GamePatcher.TryPatch();
             UpdateControls();
         };
 
@@ -107,8 +107,7 @@ public partial class MainForm : Form {
         UpdateControls();
     }
 
-    private static Button NewButton(string text = "") => new() {
-        Text = text,
+    private static Button NewButton() => new() {
         Dock = DockStyle.Fill,
         Height = 40,
         Margin = new Padding(5)

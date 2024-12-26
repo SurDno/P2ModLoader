@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
 using P2ModLoader.Helper;

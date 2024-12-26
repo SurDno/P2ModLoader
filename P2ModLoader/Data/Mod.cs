@@ -24,16 +24,19 @@ public class Mod {
 
 	public string GetModificationTypes() {
 		var modTypes = new List<string>();
-		
-		AddToListIfDefinitionExists(modTypes, "dll", ".dll files");
-		AddToListIfDefinitionExists(modTypes, "cs",  "code");
-		//AddToListIfDefinitionExists(modTypes, "xml", "virtual machine");
-        
+    
+		AddToListIfDefinitionExists(modTypes, "dll", ".dll files", FolderPath);
+		AddToListIfDefinitionExists(modTypes, "cs", "code", FolderPath);
+		AddToListIfDefinitionExists(modTypes, "xml", "templates", Path.Combine(FolderPath, "Data", "Templates"));
+		AddToListIfDefinitionExists(modTypes, "gz", "templates", Path.Combine(FolderPath, "Data", "Templates"));
+		AddToListIfDefinitionExists(modTypes, "xml", "VM", Path.Combine(FolderPath, "Data", "VirtualMachine"));
+		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic_Data"));
+    
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}
 
-	private void AddToListIfDefinitionExists(List<string> modTypes, string extension, string result) {
-		if (Directory.GetFiles(FolderPath, $"*.{extension}", SearchOption.AllDirectories).Length != 0) 
+	private void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) {
+		if (Directory.Exists(path) && Directory.GetFiles(path, $"*.{ext}", SearchOption.AllDirectories).Length != 0) 
 			modTypes.Add(result);
 	}
 }

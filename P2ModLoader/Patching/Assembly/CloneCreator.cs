@@ -2,7 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
-namespace P2ModLoader.AssemblyPatching;
+namespace P2ModLoader.Patching.Assembly;
 
 public static class CloneCreator {
     public static Instruction CloneInstruction(Instruction instruction, ModuleDefinition targetModule,

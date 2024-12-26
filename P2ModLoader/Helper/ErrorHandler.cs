@@ -1,6 +1,3 @@
-using System;
-using System.Windows.Forms;
-
 namespace P2ModLoader.Helper;
 
 public static class ErrorHandler {

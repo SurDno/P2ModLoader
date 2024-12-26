@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
 using P2ModLoader.Helper;

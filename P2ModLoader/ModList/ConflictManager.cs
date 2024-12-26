@@ -101,23 +101,22 @@ public static class ConflictManager {
 
 
     private static IEnumerable<ConflictInfo> GetFileConflicts(Mod mod, Mod otherMod, IEnumerable<Mod> allMods) {
-        var extensions = new[] { "*.dll", "*.cs", "*.xml" };
-
+        var extensions = new[] { "*.dll", "*.cs", "*.xml", "*.xml.gz" };
+    
         foreach (var extension in extensions) {
             var myFiles = Directory.GetFiles(mod.FolderPath, extension, SearchOption.AllDirectories)
                 .Select(path => Path.GetRelativePath(mod.FolderPath, path));
-
+            
             var otherFiles = Directory.GetFiles(otherMod.FolderPath, extension, SearchOption.AllDirectories)
                 .Select(path => Path.GetRelativePath(otherMod.FolderPath, path));
-
+            
             foreach (var conflictingFile in myFiles.Intersect(otherFiles, StringComparer.OrdinalIgnoreCase)) {
                 var myFullPath = Path.Combine(mod.FolderPath, conflictingFile);
                 var otherFullPath = Path.Combine(otherMod.FolderPath, conflictingFile);
-
-                if (!FilesAreIdentical(myFullPath, otherFullPath)) {
-                    if (!IsConflictResolvedByPatch(mod, otherMod, conflictingFile, allMods)) {
-                        yield return new ConflictInfo(ConflictType.File, otherMod, conflictingFile);
-                    }
+            
+                if (!FileConflictResolution.AreFilesCompatible(myFullPath, otherFullPath) && 
+                    !IsConflictResolvedByPatch(mod, otherMod, conflictingFile, allMods)) {
+                    yield return new ConflictInfo(ConflictType.File, otherMod, conflictingFile);
                 }
             }
         }
@@ -239,37 +238,6 @@ public static class ConflictManager {
 
         return new ModConflictDisplay(NoConflictColor, string.Empty);
 
-    }
-
-    private static bool FilesAreIdentical(string path1, string path2) {
-        var file1Info = new FileInfo(path1);
-        var file2Info = new FileInfo(path2);
-
-        if (file1Info.Length != file2Info.Length)
-            return false;
-
-        using var fs1 = new FileStream(path1, FileMode.Open, FileAccess.Read);
-        using var fs2 = new FileStream(path2, FileMode.Open, FileAccess.Read);
-
-        const int bufferSize = 4096;
-        var buffer1 = new byte[bufferSize];
-        var buffer2 = new byte[bufferSize];
-
-        while (true) {
-            var count1 = fs1.Read(buffer1, 0, bufferSize);
-            var count2 = fs2.Read(buffer2, 0, bufferSize);
-
-            if (count1 != count2)
-                return false;
-
-            if (count1 == 0)
-                return true;
-
-            for (var i = 0; i < count1; i++) {
-                if (buffer1[i] != buffer2[i])
-                    return false;
-            }
-        }
     }
 
     private static IEnumerable<string> GetAllPaths(string rootPath) {

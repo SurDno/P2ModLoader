@@ -11,7 +11,7 @@ using P2ModLoader.Helper;
 using LanguageVersion = Microsoft.CodeAnalysis.CSharp.LanguageVersion;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
-namespace P2ModLoader.AssemblyPatching;
+namespace P2ModLoader.Patching.Assembly;
 
 public static class AssemblyPatcher {
     public static bool PatchAssembly(string dllPath, string updatedSourcePath) {
@@ -320,45 +320,38 @@ public static class AssemblyPatcher {
         foreach (var propDecl in propertyGroup) {
             var propName = propDecl.Identifier.Text;
 
-            var newProp = newType.Properties.FirstOrDefault(p => p.Name == propName);
             var originalProp = originalType.Properties.FirstOrDefault(p => p.Name == propName);
+            var newProp     = newType.Properties.FirstOrDefault(p => p.Name == propName);
 
-            if (newProp == null) {
-                Logger.LogWarning($"Could not find property {propName} in the compiled assembly");
-                continue;
-            }
-
-            if (originalProp == null) {
-                Logger.LogInfo($"Adding new property {propName} to type {fullTypeName}");
-                var importedProperty = CloneCreator.CloneProperty(newProp, originalAssembly.MainModule, originalType);
-                originalType.Properties.Add(importedProperty);
-                Logger.LogInfo($"Added new property {propName}");
-            } else {
+            if (originalProp != null && newProp != null)
+            {
+                // Force the property type
                 originalProp.PropertyType = originalAssembly.MainModule.ImportReference(newProp.PropertyType);
-                CloneCreator.CloneAttributes(newProp, originalProp, originalAssembly.MainModule);
 
-                if (newProp.GetMethod != null) {
-                    if (originalProp.GetMethod == null) {
-                        Logger.LogInfo($"Original property {propName} had no get accessor, adding it.");
-                        var importedGet = CloneCreator.CloneMethod(newProp.GetMethod, originalAssembly.MainModule);
-                        originalType.Methods.Add(importedGet);
-                        originalProp.GetMethod = importedGet;
-                    } else {
-                        ReplaceMethodBody(originalProp.GetMethod, newProp.GetMethod, originalAssembly.MainModule);
-                        Logger.LogInfo($"Replaced get accessor of property {propName}");
-                    }
+                // Clear old get method (if exists)
+                if (originalProp.GetMethod != null)
+                    originalType.Methods.Remove(originalProp.GetMethod);
+
+                // Clone & assign new get method
+                if (newProp.GetMethod != null)
+                {
+                    var clonedGet = CloneCreator.CloneMethod(newProp.GetMethod, originalAssembly.MainModule);
+                    originalType.Methods.Add(clonedGet);
+                    originalProp.GetMethod = clonedGet;
+                    Logger.LogInfo($"Swapped in new get accessor of property {propName}");
                 }
 
-                if (newProp.SetMethod != null) {
-                    if (originalProp.SetMethod == null) {
-                        Logger.LogInfo($"Original property {propName} had no set accessor, adding it.");
-                        var importedSet = CloneCreator.CloneMethod(newProp.SetMethod, originalAssembly.MainModule);
-                        originalType.Methods.Add(importedSet);
-                        originalProp.SetMethod = importedSet;
-                    } else {
-                        ReplaceMethodBody(originalProp.SetMethod, newProp.SetMethod, originalAssembly.MainModule);
-                        Logger.LogInfo($"Replaced set accessor of property {propName}");
-                    }
+                // Clear old set method (if exists)
+                if (originalProp.SetMethod != null)
+                    originalType.Methods.Remove(originalProp.SetMethod);
+
+                // Clone & assign new set method
+                if (newProp.SetMethod != null)
+                {
+                    var clonedSet = CloneCreator.CloneMethod(newProp.SetMethod, originalAssembly.MainModule);
+                    originalType.Methods.Add(clonedSet);
+                    originalProp.SetMethod = clonedSet;
+                    Logger.LogInfo($"Swapped in new set accessor of property {propName}");
                 }
             }
         }

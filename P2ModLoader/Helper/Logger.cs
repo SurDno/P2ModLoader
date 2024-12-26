@@ -1,6 +1,3 @@
-using System;
-using System.IO;
-
 namespace P2ModLoader.Helper;
 
 public static class Logger {

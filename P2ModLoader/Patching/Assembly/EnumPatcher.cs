@@ -1,11 +1,10 @@
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using P2ModLoader.Helper;
 
-namespace P2ModLoader.AssemblyPatching
+namespace P2ModLoader.Patching.Assembly
 {
     public static class EnumPatcher
     {
