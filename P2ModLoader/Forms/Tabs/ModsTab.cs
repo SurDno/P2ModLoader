@@ -393,7 +393,7 @@ public class ModsTab : BaseTab {
             return;
         }
 
-        var mod = (Mod)_modListView.SelectedItems[0].Tag;
+        var mod = (Mod)_modListView.SelectedItems[0].Tag!;
         var modificationInfo = mod.GetModificationTypes();
         var display = ConflictManager.GetConflictDisplay(mod, ModManager.Mods);
 

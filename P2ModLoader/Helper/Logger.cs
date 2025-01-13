@@ -3,7 +3,7 @@ namespace P2ModLoader.Helper;
 public static class Logger {
     private static readonly string ExeLogFilePath;
     private static readonly object LockObject = new();
-    private static readonly List<string> BufferedLogs = new();
+    private static readonly List<string> BufferedLogs = [];
     private static string? _lastInstallLogPath;
 
     static Logger() {

@@ -7,7 +7,7 @@ public class SettingsTab : BaseTab {
     private TextBox? _pathTextBox;
     private Button? _browseButton, _locateButton, _checkForUpdatesButton;
     private CheckBox? _allowConflictsCheckBox, _checkForUpdatesCheckBox;
-    private MainForm? _mainForm;
+    private readonly MainForm? _mainForm;
 
     public SettingsTab(TabPage page, MainForm mainForm) : base(page) {
         _mainForm = mainForm;
@@ -84,13 +84,13 @@ public class SettingsTab : BaseTab {
         using var folderDialog = new FolderBrowserDialog();
         if (folderDialog.ShowDialog() != DialogResult.OK) return;
         SettingsHolder.InstallPath = folderDialog.SelectedPath;
-        _mainForm.UpdateControls();
+        _mainForm!.UpdateControls();
     }
 
     private void LocateButton_Click(object? sender, EventArgs e) {
         var installPath = InstallationLocator.FindInstall();
         if (string.IsNullOrEmpty(installPath)) return;
         SettingsHolder.InstallPath = installPath;
-        _mainForm.UpdateControls();
+        _mainForm!.UpdateControls();
     }
 }

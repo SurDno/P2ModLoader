@@ -29,7 +29,7 @@ public class SavesTab : BaseTab {
 		}
 	}
 
-	protected override void InitializeComponents() {
+	protected sealed override void InitializeComponents() {
 		Logger.LogInfo("Appdata found, initializing saves tree view.");
 		_savesTreeView = new TreeView { Dock = DockStyle.Fill };
 		_profileManager = new ProfileManager(_savesDirectory!, _profilesPath!);

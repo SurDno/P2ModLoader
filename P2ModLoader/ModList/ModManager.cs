@@ -4,7 +4,7 @@ using P2ModLoader.Helper;
 namespace P2ModLoader.ModList;
 
 public static class ModManager {
-    private static readonly List<Mod> _mods = new();
+    private static readonly List<Mod> _mods = [];
     public static IReadOnlyList<Mod> Mods => _mods.AsReadOnly();
     
     public static event Action? ModsLoaded;
