@@ -373,6 +373,8 @@ public static class AssemblyPatcher {
     }
 
     private class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharpSyntaxRewriter {
+        private bool addedNewMethods;
+
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) {
             foreach (var replacement in methodReplacements) {
                 if (node.Identifier.Text != replacement.Name)
@@ -390,6 +392,21 @@ public static class AssemblyPatcher {
             }
 
             return node;
+        }
+
+        public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node) {
+            var updatedNode = (ClassDeclarationSyntax)base.VisitClassDeclaration(node);
+            if (addedNewMethods) return updatedNode;
+        
+            var existingMethods = node.Members.OfType<MethodDeclarationSyntax>()
+                .Select(m => (m.Identifier.Text, Types: m.ParameterList.Parameters.Select(p => p.Type.ToString()).ToList()));
+            
+            var newMethods = methodReplacements
+                .Where(r => !existingMethods.Any(e => e.Text == r.Name && e.Types.SequenceEqual(r.Types)))
+                .Select(r => r.ReplacementMethod);
+
+            addedNewMethods = true;
+            return updatedNode.AddMembers(newMethods.ToArray());
         }
     }
 
