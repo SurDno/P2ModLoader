@@ -132,8 +132,8 @@ public partial class MainForm : Form {
             return;
         }
 
-        var unpatchedText = hasMods ? "Current mod list has not been applied yet. Patch to apply the changes."
-                : "There are still applied mods. Restore default to recover backups.";
+        var unpatchedText = hasMods ? "Current mod list might not been applied yet. Patch to apply the changes."
+                : "There might still be applied mods. Restore default to recover backups.";
         var patchedText = hasMods ? "Current mod list has been applied to the game." :
             "No mods have been applied to the game.";
         
