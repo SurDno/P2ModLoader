@@ -386,7 +386,7 @@ public static class AssemblyPatcher {
 
                 if (nodeParameterTypes.SequenceEqual(replacement.Types)) {
                     return replacement.ReplacementMethod
-                        .WithModifiers(node.Modifiers)
+                        .WithModifiers(replacement.ReplacementMethod.Modifiers)  
                         .WithAttributeLists(node.AttributeLists);
                 }
             }
