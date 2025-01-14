@@ -18,9 +18,15 @@ public static class CloneCreator {
                 return Instruction.Create(opcode);
             case TypeReference typeRef:
                 return Instruction.Create(opcode, targetModule.ImportReference(typeRef));
-            case MethodReference methodRef:    
-                if (methodRef.DeclaringType.FullName != currentType.FullName)
-                    return Instruction.Create(opcode, targetModule.ImportReference(methodRef));
+            case MethodReference methodRef:
+                if (methodRef.DeclaringType.FullName != currentType.FullName) {
+                    try {
+                        return Instruction.Create(opcode, targetModule.ImportReference(methodRef, currentType));
+                    } catch {
+                        return Instruction.Create(opcode, targetModule.ImportReference(methodRef));
+                    }
+                }
+
                 var candidates = currentType.Methods
                     .Where(m => m.Name == methodRef.Name && m.Parameters.Count == methodRef.Parameters.Count);
                 var resolvedMethod = candidates.FirstOrDefault(m =>

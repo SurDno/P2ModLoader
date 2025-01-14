@@ -89,11 +89,13 @@ public static class AssemblyPatcher {
                 var classDecl = classDeclarations.First();
                 var namespaceDecl = classDecl.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
                 var namespaceName = namespaceDecl?.Name.ToString() ?? "";
-                var fullTypeName = string.IsNullOrEmpty(namespaceName)
-                    ? classDecl.Identifier.Text
-                    : $"{namespaceName}.{classDecl.Identifier.Text}";
                 var methodsForClass = methodDeclarations.ToList();
                 var propertiesForClass = propertyDeclarations.ToList();
+
+                var baseName = classDecl.Identifier.Text;
+                var arity = classDecl.TypeParameterList?.Parameters.Count ?? 0;
+                var fullType = arity > 0 ? $"{baseName}`{arity}" : baseName;
+                var fullTypeName = string.IsNullOrEmpty(namespaceName) ? fullType : $"{namespaceName}.{fullType}";
 
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
 
