@@ -81,11 +81,16 @@ public static class XmlPatcher {
     
     private static XElement? FindMatchingNode(XElement parent, XElement nodeToFind) {
         var idAttr = nodeToFind.Attribute("id");
-        if (idAttr != null)
-            return parent.Elements().FirstOrDefault(e => e.Attribute("id")?.Value == idAttr.Value);
-        var idNode = nodeToFind.Element("Id");
-        if (idNode != null)
-            return parent.Elements().FirstOrDefault(e => e.Element("Id")?.Value == idNode.Value);
+        if (idAttr != null) 
+            return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Attribute("id")?.Value == idAttr.Value);
+
+        if (nodeToFind.Name == "Object") {
+            var idElement = nodeToFind.Element("Id");
+            if (idElement != null) {
+                var idValue = idElement.Value;
+                return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Element("Id")?.Value == idValue);
+            }
+        }
 
         var sameNameElements = parent.Elements(nodeToFind.Name).ToList();
         var indexInSameNameSiblings = nodeToFind.ElementsBeforeSelf(nodeToFind.Name).Count();
