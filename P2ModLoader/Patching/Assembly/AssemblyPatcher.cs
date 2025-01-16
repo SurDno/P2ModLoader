@@ -266,8 +266,9 @@ public static class AssemblyPatcher {
         var mergedSource = mergedRoot.NormalizeWhitespace().ToFullString();
         var mergedTree = CSharpSyntaxTree.ParseText(mergedSource);
 
+        var tempAsmName = Path.GetRandomFileName();
         var compilation = CSharpCompilation.Create(
-            Path.GetRandomFileName(),
+            tempAsmName,
             [mergedTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
@@ -357,7 +358,8 @@ public static class AssemblyPatcher {
                 }
             }
         }
-
+        
+        PostPatchReferenceFixer.FixReferencesForPatchedType(originalType, tempAsmName, originalAssembly.MainModule);
         return true;
     }
 
