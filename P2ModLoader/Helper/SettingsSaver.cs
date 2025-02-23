@@ -3,8 +3,8 @@ using P2ModLoader.Data;using System.Text.Json;
 namespace P2ModLoader.Helper;
 
 public static class SettingsSaver {
-    private const string SETTINGS_DIRECTORY = "Settings";
-    private static readonly string SettingsPath = Path.Combine(SETTINGS_DIRECTORY, "settings.json");
+    private static readonly string SettingsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SETTINGS");
+    private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "settings.json");
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     private static bool _subscribed;
     private static bool _pauseSaving;
@@ -55,7 +55,7 @@ public static class SettingsSaver {
         
         Logger.LogInfo($"Saving new settings to settings.json.");
         try {
-            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SETTINGS_DIRECTORY));
+            Directory.CreateDirectory(SettingsDirectory);
             
             var settings = new SavedSettings {
                 InstallPath = SettingsHolder.InstallPath == null ? "null" : SettingsHolder.InstallPath,
