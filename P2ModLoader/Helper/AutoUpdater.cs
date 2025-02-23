@@ -119,9 +119,8 @@ public static partial class AutoUpdater {
             FileName = "cmd.exe",
             Arguments = $"/c {updateScript}",
             WindowStyle = ProcessWindowStyle.Hidden,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
+            UseShellExecute = true,
+            Verb = "runas"
         };
     
         Logger.LogInfo("Attempting to start update script...");
