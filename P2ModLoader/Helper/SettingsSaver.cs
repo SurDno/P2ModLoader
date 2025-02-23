@@ -55,7 +55,7 @@ public static class SettingsSaver {
         
         Logger.LogInfo($"Saving new settings to settings.json.");
         try {
-            Directory.CreateDirectory(SETTINGS_DIRECTORY);
+            Directory.CreateDirectory(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, SETTINGS_DIRECTORY));
             
             var settings = new SavedSettings {
                 InstallPath = SettingsHolder.InstallPath == null ? "null" : SettingsHolder.InstallPath,
