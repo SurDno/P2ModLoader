@@ -64,8 +64,8 @@ public class MainForm : Form {
             Margin = new Padding(5)
         };
 
-        buttonContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 20F));
-        buttonContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
+        buttonContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 27F));
+        buttonContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33F));
         buttonContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40F));
 
         _patchButton = NewButton();
