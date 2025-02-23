@@ -1,5 +1,4 @@
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 
 namespace P2ModLoader.Patching.Assembly;
 

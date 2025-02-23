@@ -4,9 +4,9 @@ namespace P2ModLoader.ModList;
 
 public static class DependencyManager {
     public class DependencyValidation {
-        public bool HasErrors { get; set; }
-        public string ErrorMessage { get; set; } = string.Empty;
-        public Color DisplayColor { get; set; } = Color.White;
+        public bool HasErrors { get; init; }
+        public string ErrorMessage { get; init; } = string.Empty;
+        public Color DisplayColor { get; init; } = Color.White;
     }
 
     private static string Normalize(string path) {

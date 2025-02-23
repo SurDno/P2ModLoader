@@ -9,7 +9,7 @@ public static class InstallationLocator {
 
     private const string STEAM_LINUX_PATH = @"\.local\share\Steam";
 
-    public static string STEAM_EXE = "steam.exe";
+    public static string SteamExe = "steam.exe";
     
     private const string PATHOLOGIC_2_STEAM_APP_ID = "505230";
 
@@ -17,7 +17,8 @@ public static class InstallationLocator {
     private const string PATHOLOGIC_STEAM_RELATIVE_PATH = @"steamapps\common\Pathologic";
 
     private const string APPDATA_PATH = @"AppData\LocalLow\Ice-Pick Lodge\Pathologic 2";
-
+    private const string LOGFILE_NAME = @"output_log.txt";
+    
     public static string? FindSteam() {
         var steamPath = GetSteamPathFromRegistry(STEAM_32_BIT_PATH);
         steamPath ??= GetSteamPathFromRegistry(STEAM_64_BIT_PATH);
@@ -26,7 +27,7 @@ public static class InstallationLocator {
             // Looking for Linux + Wine setup
             steamPath = Path.Join(@"Z:\home\", Environment.GetEnvironmentVariable("USERNAME"), STEAM_LINUX_PATH);
             steamPath = Path.Exists(steamPath) ? steamPath : null;
-            STEAM_EXE = Path.Exists(steamPath) ? "steam.sh" : STEAM_EXE;
+            SteamExe = Path.Exists(steamPath) ? "steam.sh" : SteamExe;
         }
         
         return steamPath;
@@ -37,7 +38,7 @@ public static class InstallationLocator {
         if (!string.IsNullOrEmpty(steamPath)) {
             Logger.LogInfo("Found Steam installation:   " + steamPath);
             return FindSteamInstall(steamPath);
-        };
+        }
 
         // TODO: Handle GOG installs.
         return null;

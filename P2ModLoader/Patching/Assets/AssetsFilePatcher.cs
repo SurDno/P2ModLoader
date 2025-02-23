@@ -1,10 +1,6 @@
 using AssetsTools.NET;
 using AssetsTools.NET.Extra;
-using AssetsTools.NET.Texture;
 using P2ModLoader.Helper;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using Image = SixLabors.ImageSharp.Image;
 
 namespace P2ModLoader.Patching.Assets;
 

@@ -74,9 +74,9 @@ public class SavesTreeViewManager {
         EditProfileNode(node);
         _treeView.BeginInvoke(() => {
             if (wasExpanded) 
-                node!.Expand();
+                node.Expand();
             else 
-                node!.Collapse();
+                node.Collapse();
         });
     }
 

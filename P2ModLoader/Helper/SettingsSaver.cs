@@ -5,8 +5,8 @@ namespace P2ModLoader.Helper;
 public static class SettingsSaver {
     private const string SETTINGS_DIRECTORY = "Settings";
     private static readonly string SettingsPath = Path.Combine(SETTINGS_DIRECTORY, "settings.json");
-    private static readonly JsonSerializerOptions Options = new JsonSerializerOptions { WriteIndented = true };
-    private static bool _subscribed = false;
+    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+    private static bool _subscribed;
     private static bool _pauseSaving;
     
     private class SavedSettings {

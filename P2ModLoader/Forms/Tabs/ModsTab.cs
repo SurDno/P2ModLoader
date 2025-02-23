@@ -31,8 +31,8 @@ public class ModsTab : BaseTab {
 
         ModsChanged += () => { SettingsHolder.IsPatched = false; };
 
-        SettingsHolder.InstallPathChanged += UpdateUIState;
-        UpdateUIState();
+        SettingsHolder.InstallPathChanged += UpdateUiState;
+        UpdateUiState();
     }
 
     public bool HasFileConflicts() {
@@ -56,7 +56,7 @@ public class ModsTab : BaseTab {
         }
     }
 
-    private void UpdateUIState() {
+    private void UpdateUiState() {
         if (_mainContainer == null) return;
 
         var installPath = SettingsHolder.InstallPath;
@@ -68,9 +68,8 @@ public class ModsTab : BaseTab {
 
         var modsPath = Path.Combine(installPath, "Mods");
         if (!Directory.Exists(modsPath)) {
-            ShowMessage(
-                "P2ModLoader has not been initialized in this directory yet. Press \"Initialize\" to generate the necessary folders.",
-                true);
+            ShowMessage("P2ModLoader has not been initialized in this directory yet. " +
+                        "Press \"Initialize\" to generate the necessary folders.", true);
             return;
         }
 
@@ -300,7 +299,7 @@ public class ModsTab : BaseTab {
         Directory.CreateDirectory(modsPath);
         Directory.CreateDirectory(logsPath);
 
-        UpdateUIState();
+        UpdateUiState();
     }
 
     private ListViewItem CreateListViewItem(Mod mod) {
@@ -323,7 +322,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ModListView_ItemChecked(object? sender, ItemCheckedEventArgs e) {
-        if (_isRefreshing || e.Item?.Tag is not Mod mod || _modListView == null) return;
+        if (_isRefreshing || e.Item.Tag is not Mod mod || _modListView == null) return;
 
         // Very dirty workaround to prevent isPatched being set to false during init.
         if (Environment.StackTrace.Contains("CreateControl"))
@@ -336,7 +335,7 @@ public class ModsTab : BaseTab {
     }
 
     private void RefreshItem(ListViewItem item) {
-        if (_isRefreshing || _modListView == null || item?.Tag is not Mod mod) return;
+        if (_isRefreshing || _modListView == null || item.Tag is not Mod mod) return;
 
         try {
             _isRefreshing = true;

@@ -21,8 +21,7 @@ public static class XPathCalculator {
 		var idElement = element.Element("Id")?.Value;
 		var identifier = idAttr ?? idElement;
 
-		var index = element.Parent.Elements(element.Name)
-			.TakeWhile(e => e != element).Count() + 1;
+		var index = element.Parent.Elements(element.Name).TakeWhile(e => e != element).Count() + 1;
     
 		var xpath = GetXPathWithIndex(element.Parent) + "/" + element.Name.LocalName;
 		return identifier != null ? xpath + $"[@id='{identifier}']" : xpath + $"[{index}]";

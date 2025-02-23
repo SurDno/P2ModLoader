@@ -11,7 +11,7 @@ namespace P2ModLoader.Helper {
 
 			if (!SettingsHolder.IsPatched && !GamePatcher.TryPatch()) return;
 
-			var gameExecutable = Path.Combine(SettingsHolder.InstallPath!, EXE_PATH);
+			var gameExecutable = Path.Combine(SettingsHolder.InstallPath, EXE_PATH);
 
 			Process.Start(new ProcessStartInfo {
 				FileName = gameExecutable,
@@ -26,7 +26,7 @@ namespace P2ModLoader.Helper {
 			if (!SettingsHolder.IsPatched && !GamePatcher.TryPatch()) return;
 
 			var steamProcess = new ProcessStartInfo {
-				FileName = Path.Combine(InstallationLocator.FindSteam()!, InstallationLocator.STEAM_EXE),
+				FileName = Path.Combine(InstallationLocator.FindSteam()!, InstallationLocator.SteamExe),
 				Arguments = "-applaunch 505230"
 			};
 

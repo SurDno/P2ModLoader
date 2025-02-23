@@ -1,26 +1,22 @@
+using System.Diagnostics;
+using System.IO.Compression;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Reflection;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace P2ModLoader.Helper;
 
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.IO.Compression;
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Reflection;
-using System.Windows.Forms;
-using System.Collections.Generic;
-using System.Linq;
-
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
+[SuppressMessage("ReSharper", "CollectionNeverUpdated.Global")]
 public class GitHubRelease {
     [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
     [JsonPropertyName("assets")] public List<GitHubAsset> Assets { get; set; } = [];
     [JsonPropertyName("body")] public string Body { get; set; } = string.Empty;
 }
 
+[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 public class GitHubAsset {
     [JsonPropertyName("browser_download_url")]
     public string BrowserDownloadUrl { get; set; } = string.Empty;

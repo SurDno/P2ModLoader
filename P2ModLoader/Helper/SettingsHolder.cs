@@ -6,7 +6,7 @@ public static class SettingsHolder {
 	private static string? _installPath;
 	private static bool _allowStartupWithConflicts;
 	private static bool _isPatched = true;
-	private static bool _checkForUpdatesOnStartup = false;
+	private static bool _checkForUpdatesOnStartup;
 	private static List<SavedModState> _lastKnownModState = [];
 
 	public static event Action? InstallPathChanged,

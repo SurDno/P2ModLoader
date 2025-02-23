@@ -36,10 +36,9 @@ public static class ConflictManager {
         var allModsList = allMods.ToList();
         var conflicts = new List<ConflictInfo>();
 
-        var modFolderName = NormalizePath(mod.FolderPath);
         var modRequirements = mod.Info.Requirements.Select(NormalizePath).ToList();
 
-        if (modRequirements.Any()) {
+        if (modRequirements.Count != 0) {
             foreach (var requiredMod in allModsList) {
                 var requiredModFolderName = NormalizePath(requiredMod.FolderPath);
                 if (!requiredMod.IsEnabled || !modRequirements.Contains(requiredModFolderName)) continue;
@@ -55,44 +54,20 @@ public static class ConflictManager {
                 conflicts.AddRange(patchFiles.Select(path => new ConflictInfo(ConflictType.Patch, requiredMod, path)));
             }
 
-            foreach (var otherMod in allModsList) {
-                if (!otherMod.IsEnabled || otherMod == mod) continue;
-
-                var otherModFolderName = NormalizePath(otherMod.FolderPath);
-
-                if (!modRequirements.Contains(otherModFolderName)) {
-                    var fileConflicts = GetFileConflicts(mod, otherMod, allModsList);
-                    foreach (var conflict in fileConflicts) {
-                        if (!IsConflictResolvedByPatch(mod, otherMod, conflict.RelativePath, allModsList)) {
-                            conflicts.Add(conflict);
-                        }
-                    }
-
-                    var pathConflicts = GetPaths(mod, otherMod, allModsList);
-                    foreach (var conflict in pathConflicts) {
-                        if (!IsConflictResolvedByPatch(mod, otherMod, conflict.RelativePath, allModsList)) {
-                            conflicts.Add(conflict);
-                        }
-                    }
-                }
+            foreach (var otherMod in allModsList.Where(otherMod => otherMod.IsEnabled && otherMod != mod)) {
+                if (modRequirements.Contains(NormalizePath(otherMod.FolderPath))) continue;
+                
+                conflicts.AddRange(GetFileConflicts(mod, otherMod, allModsList).Where(conflict =>
+                    !IsConflictResolved(mod, otherMod, conflict.RelativePath, allModsList)));
+                conflicts.AddRange(GetPaths(mod, otherMod, allModsList)
+                    .Where(с => !IsConflictResolved(mod, otherMod, с.RelativePath, allModsList)));
             }
         } else {
-            foreach (var otherMod in allModsList) {
-                if (!otherMod.IsEnabled || otherMod == mod) continue;
-
-                var fileConflicts = GetFileConflicts(mod, otherMod, allModsList);
-                foreach (var conflict in fileConflicts) {
-                    if (!IsConflictResolvedByPatch(mod, otherMod, conflict.RelativePath, allModsList)) {
-                        conflicts.Add(conflict);
-                    }
-                }
-
-                var pathConflicts = GetPaths(mod, otherMod, allModsList);
-                foreach (var conflict in pathConflicts) {
-                    if (!IsConflictResolvedByPatch(mod, otherMod, conflict.RelativePath, allModsList)) {
-                        conflicts.Add(conflict);
-                    }
-                }
+            foreach (var otherMod in allModsList.Where(otherMod => otherMod.IsEnabled && otherMod != mod)) {
+                conflicts.AddRange(GetFileConflicts(mod, otherMod, allModsList)
+                    .Where(conflict => !IsConflictResolved(mod, otherMod, conflict.RelativePath, allModsList)));
+                conflicts.AddRange(GetPaths(mod, otherMod, allModsList).Where(conflict =>
+                    !IsConflictResolved(mod, otherMod, conflict.RelativePath, allModsList)));
             }
         }
 
@@ -115,7 +90,7 @@ public static class ConflictManager {
                 var otherFullPath = Path.Combine(otherMod.FolderPath, conflictingFile);
             
                 if (!FileConflictResolution.AreFilesCompatible(myFullPath, otherFullPath) && 
-                    !IsConflictResolvedByPatch(mod, otherMod, conflictingFile, allMods)) {
+                    !IsConflictResolved(mod, otherMod, conflictingFile, allMods)) {
                     yield return new ConflictInfo(ConflictType.File, otherMod, conflictingFile);
                 }
             }
@@ -129,23 +104,21 @@ public static class ConflictManager {
             var relativePath = Path.GetRelativePath(mod.FolderPath, myPath);
             var otherFullPath = Path.Combine(otherMod.FolderPath, relativePath);
 
-            bool conflictExists = false;
+            var conflictExists = false;
 
             if (File.Exists(myPath)) {
                 var pathWithoutExt = Path.Combine(
                     Path.GetDirectoryName(otherFullPath)!,
                     Path.GetFileNameWithoutExtension(otherFullPath)
                 );
-                if (Directory.Exists(pathWithoutExt)) {
+                if (Directory.Exists(pathWithoutExt)) 
                     conflictExists = true;
-                }
             }
 
             if (Directory.Exists(myPath)) {
                 var pathWithExt = otherFullPath + ".dll";
-                if (File.Exists(pathWithExt)) {
+                if (File.Exists(pathWithExt)) 
                     conflictExists = true;
-                }
             }
 
             if ((File.Exists(myPath) && Directory.Exists(otherFullPath)) ||
@@ -153,15 +126,13 @@ public static class ConflictManager {
                 conflictExists = true;
             }
 
-            if (conflictExists) {
-                if (!IsConflictResolvedByPatch(mod, otherMod, relativePath, allMods)) {
-                    yield return new ConflictInfo(ConflictType.Path, otherMod, relativePath);
-                }
-            }
+            if (!conflictExists) continue;
+            if (!IsConflictResolved(mod, otherMod, relativePath, allMods))
+                yield return new ConflictInfo(ConflictType.Path, otherMod, relativePath);
         }
     }
 
-    private static bool IsConflictResolvedByPatch(Mod mod1, Mod mod2, string? relativePath, IEnumerable<Mod> allMods) {
+    private static bool IsConflictResolved(Mod mod1, Mod mod2, string? relativePath, IEnumerable<Mod> allMods) {
         var mod1Folder = NormalizePath(mod1.FolderPath);
         var mod2Folder = NormalizePath(mod2.FolderPath);
 
@@ -189,30 +160,19 @@ public static class ConflictManager {
 
         var patches = allMods.Where(m =>
             m.IsEnabled &&
-            m.Info.Requirements.Any() &&
+            m.Info.Requirements.Count != 0 &&
             m.Info.Requirements.Select(NormalizePath).Contains(mod1Folder) &&
             m.Info.Requirements.Select(NormalizePath).Contains(mod2Folder)
         );
 
-        foreach (var patch in patches) {
-            if (relativePath != null) {
-                var patchFilePath = Path.Combine(patch.FolderPath, relativePath);
-                if (File.Exists(patchFilePath)) {
-                    return true;
-                }
-            } else {
-                return true;
-            }
-        }
-
-        return false;
+        return patches.Any(patch => relativePath == null || File.Exists(Path.Combine(patch.FolderPath, relativePath)));
     }
 
     public static ModConflictDisplay GetConflictDisplay(Mod mod, IEnumerable<Mod> allMods) {
         var conflicts = GetConflicts(mod, allMods).ToList();
 
         var patches = conflicts.Where(c => c.Type == ConflictType.Patch).ToList();
-        if (patches.Any()) {
+        if (patches.Count != 0) {
             var patchDetails = patches
                 .Select(c => $"{c.ConflictingMod.Info.Name} ({c.RelativePath})")
                 .Distinct();
@@ -220,7 +180,7 @@ public static class ConflictManager {
         }
 
         var fileConflicts = conflicts.Where(c => c.Type == ConflictType.File).ToList();
-        if (fileConflicts.Any()) {
+        if (fileConflicts.Count != 0) {
             var conflictDetails = fileConflicts
                 .Select(c => $"{c.ConflictingMod.Info.Name} ({c.RelativePath})")
                 .Distinct();

@@ -5,7 +5,7 @@ using P2ModLoader.Patching;
 
 namespace P2ModLoader.Forms;
 
-public partial class MainForm : Form {
+public class MainForm : Form {
     private Button? _patchButton;
     private Button? _launchExeButton;
     private Button? _launchSteamButton;
@@ -114,7 +114,7 @@ public partial class MainForm : Form {
     };
     
     public void UpdateControls() {
-        var hasConflicts = _modsTab.HasFileConflicts() || DependencyManager.HasDependencyErrors(ModManager.Mods);
+        var hasConflicts = _modsTab!.HasFileConflicts() || DependencyManager.HasDependencyErrors(ModManager.Mods);
         var shouldDisableButtons = SettingsHolder.InstallPath == null ||
                                    (!SettingsHolder.AllowStartupWithConflicts && hasConflicts) ||
                                    ModManager.Mods.Count == 0;
