@@ -13,6 +13,10 @@ public static class Logger {
         File.Delete(ExeLogFilePath);
     }
 
+    public static string GetLogPath() {
+        return GetInstallLogPath() ?? ExeLogFilePath;
+    }
+
     private static string? GetInstallLogPath() {
         if (string.IsNullOrEmpty(SettingsHolder.InstallPath))
             return null;

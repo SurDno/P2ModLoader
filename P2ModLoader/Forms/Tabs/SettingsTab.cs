@@ -1,12 +1,10 @@
+using System.Diagnostics;
 using P2ModLoader.Abstract;
 using P2ModLoader.Helper;
 
 namespace P2ModLoader.Forms.Tabs;
 
 public class SettingsTab : BaseTab {
-    private TextBox? _pathTextBox;
-    private Button? _browseButton, _locateButton, _checkForUpdatesButton;
-    private CheckBox? _allowConflictsCheckBox, _checkForUpdatesCheckBox;
     private readonly MainForm? _mainForm;
 
     public SettingsTab(TabPage page, MainForm mainForm) : base(page) {
@@ -15,82 +13,102 @@ public class SettingsTab : BaseTab {
     }
     
     protected sealed override void InitializeComponents() {
+        var logButtonsPanel = new Panel();
+        logButtonsPanel.Width = 500;
+        logButtonsPanel.Height = 40;
+        logButtonsPanel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+        
+        var p2LogButton = new Button();
+        p2LogButton.Text = "Open Pathologic 2 log";
+        p2LogButton.Width = 210;
+        p2LogButton.Height = 32;
+        p2LogButton.Dock = DockStyle.Right;
+        p2LogButton.Click += (_, _) => Process.Start("explorer.exe", InstallationLocator.FindLogFile());
+
+        var modLoaderLogButton = new Button();
+        modLoaderLogButton.Text = "Open P2ModLoader log";
+        modLoaderLogButton.Width = 240;
+        modLoaderLogButton.Height = 32;
+        modLoaderLogButton.Dock = DockStyle.Right;
+        modLoaderLogButton.Click += (_, _) => Process.Start("explorer.exe", Logger.GetLogPath());
+
+        logButtonsPanel.Controls.AddRange([modLoaderLogButton, p2LogButton]);
+        
         var pathLabel = new Label();
         pathLabel.Text = "Installation Path:";
         pathLabel.Location = new Point(20, 20);
         pathLabel.AutoSize = true;
 
-        _pathTextBox = new TextBox();
-        _pathTextBox.Location = new Point(20, 45);
-        _pathTextBox.Width = 400;
-        _pathTextBox.Height = 28;
+        var pathTextBox = new TextBox();
+        pathTextBox.Location = new Point(20, 45);
+        pathTextBox.Width = 400;
+        pathTextBox.Height = 28;
 
-        _pathTextBox!.Text = SettingsHolder.InstallPath ?? string.Empty;
+        pathTextBox.Text = SettingsHolder.InstallPath ?? string.Empty;
         SettingsHolder.InstallPathChanged += () => {
-            _pathTextBox!.Text = SettingsHolder.InstallPath ?? string.Empty;
+            pathTextBox.Text = SettingsHolder.InstallPath ?? string.Empty;
         };
         
-        _browseButton = new Button();
-        _browseButton.Text = "Browse";
-        _browseButton.Location = new Point(430, 45);
-        _browseButton.Width = 80;
-        _browseButton.Height = 32;
-        _browseButton.Click += BrowseButton_Click;
-
-        _locateButton = new Button();
-        _locateButton.Text = "Locate";
-        _locateButton.Location = new Point(520, 45);
-        _locateButton.Width = 80;
-        _locateButton.Height = 32;
-        _locateButton.Click += LocateButton_Click;
-
-        _allowConflictsCheckBox = new CheckBox();
-        _allowConflictsCheckBox.Text = "Allow startup with conflicts (not recommended)";
-        _allowConflictsCheckBox.Location = new Point(20, 85);
-        _allowConflictsCheckBox.AutoSize = true;
-        _allowConflictsCheckBox.Checked = SettingsHolder.AllowStartupWithConflicts;
-        _allowConflictsCheckBox.CheckedChanged += (_, _) => {
-            SettingsHolder.AllowStartupWithConflicts = _allowConflictsCheckBox!.Checked;
+        var browseButton = new Button();
+        browseButton.Text = "Browse";
+        browseButton.Location = new Point(430, 45);
+        browseButton.Width = 80;
+        browseButton.Height = 32;
+        browseButton.Click += (_, _) => {
+            using var folderDialog = new FolderBrowserDialog();
+            if (folderDialog.ShowDialog() != DialogResult.OK) return;
+            SettingsHolder.InstallPath = folderDialog.SelectedPath;
+            _mainForm!.UpdateControls();
         };
 
-        _checkForUpdatesButton = new Button();
-        _checkForUpdatesButton.Text = "Check for updates";
-        _checkForUpdatesButton.Location = new Point(20, 125);
-        _checkForUpdatesButton.Width = 190;
-        _checkForUpdatesButton.Height = 32;
-        _checkForUpdatesButton.Click += (_, _) => _ = AutoUpdater.CheckForUpdatesAsync(showNoUpdatesDialog: true); 
+        var locateButton = new Button();
+        locateButton.Text = "Locate";
+        locateButton.Location = new Point(520, 45);
+        locateButton.Width = 80;
+        locateButton.Height = 32;
+        locateButton.Click += (_, _) => {
+            var installPath = InstallationLocator.FindInstall();
+            if (string.IsNullOrEmpty(installPath)) return;
+            SettingsHolder.InstallPath = installPath;
+            _mainForm!.UpdateControls();
+        };
+
+        var allowConflictsCheckBox = new CheckBox();
+        allowConflictsCheckBox.Text = "Allow startup with conflicts (not recommended)";
+        allowConflictsCheckBox.Location = new Point(20, 85);
+        allowConflictsCheckBox.AutoSize = true;
+        allowConflictsCheckBox.Checked = SettingsHolder.AllowStartupWithConflicts;
+        allowConflictsCheckBox.CheckedChanged += (_, _) => {
+            SettingsHolder.AllowStartupWithConflicts = allowConflictsCheckBox.Checked;
+        };
+
+        var checkForUpdatesButton = new Button();
+        checkForUpdatesButton.Text = "Check for updates";
+        checkForUpdatesButton.Location = new Point(20, 125);
+        checkForUpdatesButton.Width = 190;
+        checkForUpdatesButton.Height = 32;
+        checkForUpdatesButton.Click += (_, _) => _ = AutoUpdater.CheckForUpdatesAsync(showNoUpdatesDialog: true); 
         
-        _checkForUpdatesCheckBox = new CheckBox();
-        _checkForUpdatesCheckBox.Text = "Check for updates on startup";
-        _checkForUpdatesCheckBox.Location = new Point(20, 165);
-        _checkForUpdatesCheckBox.AutoSize = true;
-        _checkForUpdatesCheckBox.Checked = SettingsHolder.CheckForUpdatesOnStartup;
-        _checkForUpdatesCheckBox.CheckedChanged += (_, _) => {
-            SettingsHolder.CheckForUpdatesOnStartup = _checkForUpdatesCheckBox!.Checked;
+        var checkForUpdatesCheckBox = new CheckBox();
+        checkForUpdatesCheckBox.Text = "Check for updates on startup";
+        checkForUpdatesCheckBox.Location = new Point(20, 165);
+        checkForUpdatesCheckBox.AutoSize = true;
+        checkForUpdatesCheckBox.Checked = SettingsHolder.CheckForUpdatesOnStartup;
+        checkForUpdatesCheckBox.CheckedChanged += (_, _) => {
+            SettingsHolder.CheckForUpdatesOnStartup = checkForUpdatesCheckBox.Checked;
         };
-    
+
+        logButtonsPanel.Location = new Point(Tab.Width - logButtonsPanel.Width - 20, Tab.Height - logButtonsPanel.Height - 20);
+        
         Tab.Controls.AddRange([
             pathLabel,
-            _pathTextBox,
-            _browseButton,
-            _locateButton,
-            _allowConflictsCheckBox,
-            _checkForUpdatesButton,
-            _checkForUpdatesCheckBox
+            pathTextBox,
+            browseButton,
+            locateButton,
+            allowConflictsCheckBox,
+            checkForUpdatesButton,
+            checkForUpdatesCheckBox,
+            logButtonsPanel
         ]);
-    }
-
-    private void BrowseButton_Click(object? sender, EventArgs e) {
-        using var folderDialog = new FolderBrowserDialog();
-        if (folderDialog.ShowDialog() != DialogResult.OK) return;
-        SettingsHolder.InstallPath = folderDialog.SelectedPath;
-        _mainForm!.UpdateControls();
-    }
-
-    private void LocateButton_Click(object? sender, EventArgs e) {
-        var installPath = InstallationLocator.FindInstall();
-        if (string.IsNullOrEmpty(installPath)) return;
-        SettingsHolder.InstallPath = installPath;
-        _mainForm!.UpdateControls();
     }
 }

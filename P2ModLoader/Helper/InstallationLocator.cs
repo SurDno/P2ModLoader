@@ -104,4 +104,8 @@ public static class InstallationLocator {
 
         return Directory.Exists(appdataPath) ? appdataPath : null;
     }
+
+    public static string FindLogFile() {
+        return Path.Combine(InstallationLocator.FindAppData()!, LOGFILE_NAME);
+    }
 }
