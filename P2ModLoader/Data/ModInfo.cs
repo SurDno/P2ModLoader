@@ -1,3 +1,5 @@
+using P2ModLoader.Helper;
+
 namespace P2ModLoader.Data;
 
 public class ModInfo {
@@ -50,6 +52,11 @@ public class ModInfo {
 					break;
 				case "min_loader_version":
 					info.MinLoaderVersion = value;
+					break;
+				default:
+					ErrorHandler.Handle($"Mod located at {Path.GetFileName(filePath)} has unsupported setting in its " +
+					                    $"ModInfo.ltx: {key}. Either there is a mistake in the file, or an update " +
+					                    $"to the mod loader is required to properly parse that.", null);
 					break;
 			}
 		}
