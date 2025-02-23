@@ -144,8 +144,9 @@ public static class AssemblyPatcher {
 
         var syntaxTree = compilationUnit.SyntaxTree;
 
+        var tempAsmName = "WorkingCopy";
         var compilation = CSharpCompilation.Create(
-            "WorkingCopy",
+            tempAsmName,
             [syntaxTree],
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
@@ -177,6 +178,7 @@ public static class AssemblyPatcher {
         var importedType = CloneCreator.CloneType(newType, originalAssembly.MainModule);
         originalAssembly.MainModule.Types.Add(importedType);
 
+        PostPatchReferenceFixer.FixReferencesForPatchedType(importedType, tempAsmName, originalAssembly.MainModule);
         return true;
     }
 
