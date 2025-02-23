@@ -95,7 +95,7 @@ public static partial class AutoUpdater {
         return notes.ToString().TrimEnd();
     }
 
-    private static bool IsNewer(string latestVersion) => Version.Parse(latestVersion) > Version.Parse(CurrentVersion);
+    public static bool IsNewer(string version) => Version.Parse(version) > Version.Parse(CurrentVersion);
 
     private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) {
         Directory.CreateDirectory(UpdateDirectory);

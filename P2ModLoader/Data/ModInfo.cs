@@ -9,6 +9,7 @@ public class ModInfo {
 	public List<string> Requirements { get; private set; } = [];
 	public List<string> LoadAfterMods { get; private set; } = []; 
 	public List<string> LoadFirst { get; private set; } = [];
+	public string MinLoaderVersion { get; private set; }
 
 	public static ModInfo FromFile(string filePath) {
 		var info = new ModInfo();
@@ -46,6 +47,9 @@ public class ModInfo {
 					break;
 				case "load_first":
 					info.LoadFirst = GetList(value).Select(x => x.EndsWith(".cs") ? x : x + ".cs").ToList();
+					break;
+				case "min_loader_version":
+					info.MinLoaderVersion = value;
 					break;
 			}
 		}

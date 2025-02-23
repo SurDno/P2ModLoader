@@ -1,4 +1,5 @@
 using P2ModLoader.Data;
+using P2ModLoader.Helper;
 
 namespace P2ModLoader.ModList;
 
@@ -17,7 +18,18 @@ public static class DependencyManager {
         if (!mod.IsEnabled) {
             return new DependencyValidation();
         }
-
+        
+        if (!string.IsNullOrEmpty(mod.Info.MinLoaderVersion)) {
+            if (AutoUpdater.IsNewer(mod.Info.MinLoaderVersion)) {
+                return new DependencyValidation {
+                    HasErrors = true,
+                    ErrorMessage = $"\r\nThis mod requires P2ModLoader version {mod.Info.MinLoaderVersion} or newer." +
+                                   $"Head to Settings to update.",
+                    DisplayColor = Color.Red
+                };
+            }
+        }
+        
         var activeMods = allMods.Where(m => m.IsEnabled).ToList();
         var activeFolders = activeMods.Select(m => Normalize(m.FolderPath)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
