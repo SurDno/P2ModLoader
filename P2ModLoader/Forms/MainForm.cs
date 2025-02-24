@@ -25,9 +25,11 @@ public class MainForm : Form {
 
     private void InitializeTabs() {
         Text = $"P2ModLoader {AutoUpdater.CurrentVersion}";
-        Size = new Size(800, 800);
-        MinimumSize = new Size(600, 600); 
+        Size = SettingsHolder.WindowSize;
+        MinimumSize = new Size(600, 700); 
 
+        ResizeEnd += (_, _) => { if (WindowState == FormWindowState.Normal) { SettingsHolder.WindowSize = Size; } };
+        
         var mainContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,

@@ -15,6 +15,7 @@ public static class SettingsSaver {
         public bool IsPatched { get; init; }
         public bool CheckForUpdates {get; init; }
         public List<SavedModState> ModState { get; init; } = [];
+        public Size WindowSize { get; init; }
     }
     
     public static void PauseSaving() => _pauseSaving = true; 
@@ -35,6 +36,7 @@ public static class SettingsSaver {
                 SettingsHolder.IsPatched = settings.IsPatched;
                 SettingsHolder.CheckForUpdatesOnStartup = settings.CheckForUpdates;
                 SettingsHolder.LastKnownModState = settings.ModState;
+                SettingsHolder.WindowSize = settings.WindowSize;
                 Logger.LogInfo("Applied settings from settings.json.");
             } catch (Exception ex) {
                 ErrorHandler.Handle("Failed to load settings", ex);
@@ -47,6 +49,7 @@ public static class SettingsSaver {
         SettingsHolder.CheckForUpdatesOnStartupChanged += SaveSettings;
         SettingsHolder.PatchStatusChanged += SaveSettings;
         SettingsHolder.ModStateChanged += SaveSettings;
+        SettingsHolder.WindowSizeChanged += SaveSettings;
         _subscribed = true;
     }
     
@@ -62,7 +65,8 @@ public static class SettingsSaver {
                 AllowStartupWithConflicts = SettingsHolder.AllowStartupWithConflicts,
                 IsPatched = SettingsHolder.IsPatched,
                 CheckForUpdates = SettingsHolder.CheckForUpdatesOnStartup,
-                ModState = SettingsHolder.LastKnownModState.ToList()
+                ModState = SettingsHolder.LastKnownModState.ToList(),
+                WindowSize = SettingsHolder.WindowSize
             };
             
             File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, Options));

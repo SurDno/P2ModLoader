@@ -8,12 +8,14 @@ public static class SettingsHolder {
 	private static bool _isPatched = true;
 	private static bool _checkForUpdatesOnStartup = true;
 	private static List<SavedModState> _lastKnownModState = [];
-
+	private static Size _windowSize = new(600, 800);
+	
 	public static event Action? InstallPathChanged,
 		StartupWithConflictsChanged,
 		PatchStatusChanged,
 		ModStateChanged,
-		CheckForUpdatesOnStartupChanged;
+		CheckForUpdatesOnStartupChanged,
+		WindowSizeChanged;
 
 	public static string? InstallPath {
 		get => _installPath;
@@ -75,4 +77,13 @@ public static class SettingsHolder {
 		ModStateChanged?.Invoke();
 	}
 
+	public static Size WindowSize {
+		get => _windowSize;
+		set {
+			if (_windowSize == value) return;
+			_windowSize = value;
+			WindowSizeChanged?.Invoke();
+			Logger.LogInfo($"Setting {nameof(WindowSize)} changed to: {value}");
+		}
+	}
 }
