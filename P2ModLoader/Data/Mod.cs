@@ -35,7 +35,7 @@ public class Mod {
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}
 
-	private void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) {
+	private static void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) {
 		if (Directory.Exists(path) && Directory.GetFiles(path, $"*.{ext}", SearchOption.AllDirectories).Length != 0) 
 			modTypes.Add(result);
 	}

@@ -41,8 +41,12 @@ public static class BackupManager {
 		var relativePath = Path.GetRelativePath(SettingsHolder.InstallPath, filePath);
 		var backupPath = Path.Combine(BackupFolderPath, relativePath);
 
-		Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
-		
+		try {
+			Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
+		} catch {
+			Logger.LogError($"Cannot create necessary directory: {relativePath} {backupPath}");
+		}
+
 		// Never overwrite existing backups if two mods modify the same file.
 		if(!File.Exists(backupPath))
 			File.Copy(filePath, backupPath, false);
