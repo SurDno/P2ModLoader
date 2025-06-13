@@ -39,11 +39,43 @@ public static class XmlPatcher {
             return;
         }
 
+        if (src.Name.LocalName == "Object" && target.Name.LocalName == "Object" && backup.Name.LocalName == "Object") {
+            var targetId = target.Element("Id")?.Value;
+            var sourceId = src.Element("Id")?.Value;
+            var backupId = backup.Element("Id")?.Value;
+            
+            if (targetId == sourceId && targetId == backupId) {
+                foreach (var sourceChild in src.Elements()) {
+                    var targetChild = target.Element(sourceChild.Name);
+                    var backupChild = backup.Element(sourceChild.Name);
+                    
+                    if (targetChild != null && backupChild != null) {
+                        MergeXmlNodes(targetChild, sourceChild, backupChild);
+                    } else if (targetChild == null && backupChild == null) {
+                        target.Add(new XElement(sourceChild));
+                    }
+                }
+                foreach (var attr in src.Attributes()) {
+                    target.SetAttributeValue(attr.Name, attr.Value);
+                }
+                return;
+            }
+        }
+        
+        if (src.Name.LocalName == "Object" && target.Name.LocalName != "Object") {
+            var targetId = target.Element("Id")?.Value;
+            var sourceId = src.Element("Id")?.Value;
+            var backupId = backup.Element("Id")?.Value;
+            
+            MergeObjectsContainer(target, src, backup);
+            return;
+        }
+
         var hasIdentifiers = src.Elements().All(e => e.Attribute("id") != null || e.Element("Id") != null);
         if (!hasIdentifiers && src.Elements().Select(e => e.Name)
                 .Any(n => src.Elements(n).Count() - backup.Elements(n).Count() != 0)) {
-            var addedNodes = GetNodeDifference(src.Elements(), target.Elements());
-            var removedNodes = GetNodeDifference(target.Elements(), src.Elements());
+            var addedNodes = GetNodeDifference(src.Elements(), backup.Elements());
+            var removedNodes = GetNodeDifference(backup.Elements(), src.Elements());
 
             if (addedNodes.Count != 0)
                 Logger.LogInfo($"Added nodes at {xpath}: {string.Join("", addedNodes)}");
@@ -61,6 +93,7 @@ public static class XmlPatcher {
             if (targetChild != null && baseChild != null) {
                 MergeXmlNodes(targetChild, sourceChild, baseChild);
             } else if (targetChild == null && baseChild == null) {
+                Logger.LogInfo($"Adding new node at {xpath}/{sourceChild.Name.LocalName}");
                 target.Add(new XElement(sourceChild));
             }
         }
@@ -70,6 +103,93 @@ public static class XmlPatcher {
             if (baseAttr != null && baseAttr.Value == attr.Value) continue;
             Logger.LogInfo($"Updating attribute {attr.Name} at {xpath} to '{attr.Value}'");
             target.SetAttributeValue(attr.Name, attr.Value);
+        }
+    }
+
+    private static void MergeObjectsContainer(XElement target, XElement src, XElement backup) {
+        var srcObjects = src.Elements("Object").ToList();
+        var srcIds = srcObjects.Select(o => o.Element("Id")?.Value).Where(id => !string.IsNullOrEmpty(id)).ToList();
+        var targetObjects = target.Elements("Object").ToList();
+        
+        var srcIdToIndex = new Dictionary<string, int>();
+        for (int i = 0; i < srcObjects.Count; i++) {
+            var id = srcObjects[i].Element("Id")?.Value;
+            if (!string.IsNullOrEmpty(id)) srcIdToIndex[id] = i;
+        }
+        
+        var existingIds = new HashSet<string>();
+        foreach (var obj in targetObjects) {
+            var id = obj.Element("Id")?.Value;
+            if (!string.IsNullOrEmpty(id)) existingIds.Add(id);
+        }
+        
+        foreach (var srcObj in srcObjects) {
+            var id = srcObj.Element("Id")?.Value;
+            if (string.IsNullOrEmpty(id)) continue;
+            
+            if (!existingIds.Contains(id)) {
+                existingIds.Add(id);
+                Logger.LogInfo($"Adding new Object with Id {id}");
+                
+                int insertIndex = -1;
+                
+                var srcIndex = srcIdToIndex[id];
+                
+                var prevObj = srcIndex > 0 ? srcObjects[srcIndex - 1] : null;
+                var nextObj = srcIndex < srcObjects.Count - 1 ? srcObjects[srcIndex + 1] : null;
+                
+                var prevId = prevObj?.Element("Id")?.Value;
+                var nextId = nextObj?.Element("Id")?.Value;
+                
+                var prevTargetIndex = -1;
+                var nextTargetIndex = -1;
+                
+                if (!string.IsNullOrEmpty(prevId)) {
+                    for (int i = 0; i < targetObjects.Count; i++) {
+                        if (targetObjects[i].Element("Id")?.Value == prevId) {
+                            prevTargetIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(nextId)) {
+                    for (int i = 0; i < targetObjects.Count; i++) {
+                        if (targetObjects[i].Element("Id")?.Value == nextId) {
+                            nextTargetIndex = i;
+                            break;
+                        }
+                    }
+                }
+                
+                if (prevTargetIndex >= 0) {
+                    insertIndex = prevTargetIndex + 1;
+                } else if (nextTargetIndex >= 0) {
+                    insertIndex = nextTargetIndex;
+                }
+                
+                var newElement = new XElement(srcObj);
+                
+                if (insertIndex >= 0 && insertIndex < targetObjects.Count) {
+                    targetObjects[insertIndex].AddBeforeSelf(newElement);
+                    targetObjects.Insert(insertIndex, newElement);
+                } else {
+                    target.Add(newElement);
+                    targetObjects.Add(newElement);
+                }
+            }
+        }
+        
+        foreach (var targetObj in targetObjects) {
+            var id = targetObj.Element("Id")?.Value;
+            if (string.IsNullOrEmpty(id)) continue;
+            
+            var srcObj = srcObjects.FirstOrDefault(o => o.Element("Id")?.Value == id);
+            var backupObj = backup.Elements("Object").FirstOrDefault(o => o.Element("Id")?.Value == id);
+            
+            if (srcObj != null && backupObj != null) {
+                MergeXmlNodes(targetObj, srcObj, backupObj);
+            }
         }
     }
 
@@ -84,12 +204,9 @@ public static class XmlPatcher {
         if (idAttr != null) 
             return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Attribute("id")?.Value == idAttr.Value);
 
-        if (nodeToFind.Name == "Object") {
-            var idElement = nodeToFind.Element("Id");
-            if (idElement != null) {
-                var idValue = idElement.Value;
-                return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Element("Id")?.Value == idValue);
-            }
+        if (nodeToFind.Element("Id") != null) {
+            var idValue = nodeToFind.Element("Id")!.Value;
+            return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Element("Id")?.Value == idValue);
         }
 
         var sameNameElements = parent.Elements(nodeToFind.Name).ToList();
