@@ -9,6 +9,7 @@ public static class CloneCreator {
         Dictionary<VariableDefinition, VariableDefinition> variableMap,
         Dictionary<ParameterDefinition, ParameterDefinition> parameterMap,
         Dictionary<Instruction, Instruction> instructionMap,
+        IGenericParameterProvider contextProvider,
         TypeDefinition currentType) {
         var opcode = instruction.OpCode;
         var operand = instruction.Operand;
@@ -16,6 +17,29 @@ public static class CloneCreator {
         switch (operand) {
             case null:
                 return Instruction.Create(opcode);
+            case GenericInstanceMethod gim:
+                var defRef = targetModule.ImportReference(gim.ElementMethod);
+                var inst = new GenericInstanceMethod(defRef);
+                foreach (var arg in gim.GenericArguments) {
+                    if (arg is GenericParameter gp)
+                        inst.GenericArguments.Add(defRef.GenericParameters[gp.Position]);
+                    else
+                        inst.GenericArguments.Add(targetModule.ImportReference(arg));
+                }
+                return Instruction.Create(opcode, inst);
+            case GenericInstanceType git:
+                var typeReference = targetModule.ImportReference(git.ElementType);
+                var instance = new GenericInstanceType(typeReference);
+                foreach (var arg in git.GenericArguments) {
+                    if (arg is GenericParameter gp)
+                        instance.GenericArguments.Add(typeReference.GenericParameters[gp.Position]);
+                    else
+                        instance.GenericArguments.Add((TypeReference)targetModule.ImportReference(arg));
+                }
+                return Instruction.Create(opcode, instance);
+            case GenericParameter gp:
+                var mapped = contextProvider.GenericParameters[gp.Position];
+                return Instruction.Create(opcode, mapped);
             case TypeReference typeRef:
                 return Instruction.Create(opcode, targetModule.ImportReference(typeRef));
             case MethodReference methodRef:
@@ -211,6 +235,7 @@ public static class CloneCreator {
                 variableMap,
                 parameterMap,
                 instructionMap,
+                newMethod,
                 currentType
             );
             instructionMap[instruction] = cloned;

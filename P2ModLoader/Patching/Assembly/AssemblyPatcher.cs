@@ -467,7 +467,7 @@ public static class AssemblyPatcher {
         var currentType = originalMethod.DeclaringType;
         foreach (var instruction in newMethod.Body.Instructions) {
             var newInstruction = CloneCreator.CloneInstruction(instruction, targetModule, variableMap, parameterMap,
-                instructionMap, currentType);
+                instructionMap, newMethod, currentType);
             instructionMap[instruction] = newInstruction;
             ilProcessor.Append(newInstruction);
         }
