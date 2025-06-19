@@ -177,10 +177,12 @@ public static class CloneCreator {
             newMethod.GenericParameters.Add(newGp);
         }
 
+        var parameterMap = new Dictionary<ParameterDefinition, ParameterDefinition>();
         foreach (var param in methodToClone.Parameters) {
             var newParam = new ParameterDefinition(param.Name, param.Attributes,
                 targetModule.ImportReference(param.ParameterType));
             newMethod.Parameters.Add(newParam);
+            parameterMap[param] = newParam;
         }
 
         if (!methodToClone.HasBody) 
@@ -203,18 +205,16 @@ public static class CloneCreator {
 
         var currentType = methodToClone.DeclaringType;
         foreach (var instruction in methodToClone.Body.Instructions) {
-            var newInstruction = CloneInstruction(instruction, targetModule, variableMap, null, instructionMap,
-                currentType);
-            instructionMap[instruction] = newInstruction;
-            ilProcessor.Append(newInstruction);
-        }
-
-        foreach (var instruction in newMethod.Body.Instructions) {
-            instruction.Operand = instruction.Operand switch {
-                Instruction inst when instructionMap.TryGetValue(inst, out var value) => value,
-                Instruction[] insts => insts.Select(ti => instructionMap.GetValueOrDefault(ti, ti)).ToArray(),
-                _ => instruction.Operand
-            };
+            var cloned = CloneInstruction(
+                instruction,
+                targetModule,
+                variableMap,
+                parameterMap,
+                instructionMap,
+                currentType
+            );
+            instructionMap[instruction] = cloned;
+            ilProcessor.Append(cloned);
         }
 
         foreach (var handler in methodToClone.Body.ExceptionHandlers) {
