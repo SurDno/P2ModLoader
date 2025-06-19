@@ -23,6 +23,7 @@ public static class GamePatcher {
             if (!BackupManager.TryRecoverBackups()) return false;
 
             var enabledMods = ModManager.Mods.Where(m => m.IsEnabled).ToList();
+            EnabledModsTracker.SaveEnabledMods(enabledMods);
             Logger.LogInfo("Preparing to patch...");
 
             if (!TryProcessMods(enabledMods)) return false;
