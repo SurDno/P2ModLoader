@@ -177,7 +177,11 @@ public static class AssemblyPatcher {
 
         var importedType = CloneCreator.CloneType(newType, originalAssembly.MainModule);
         originalAssembly.MainModule.Types.Add(importedType);
-
+        var orig = originalAssembly.MainModule.GetType(fullTypeName);
+        foreach (var clone in newType.NestedTypes.Select(n => CloneCreator.CloneType(n, originalAssembly.MainModule))) {
+            orig.NestedTypes.Add(clone);
+            PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
+        }
         PostPatchReferenceFixer.FixReferencesForPatchedType(importedType, tempAsmName, originalAssembly.MainModule);
         return true;
     }
@@ -300,6 +304,11 @@ public static class AssemblyPatcher {
         if (originalType == null) {
             ErrorHandler.Handle($"Original type {fullTypeName} not found.", null);
             return false;
+        }
+        
+        foreach (var clone in newType.NestedTypes.Select(n => CloneCreator.CloneType(n, originalAssembly.MainModule))) {
+            originalType.NestedTypes.Add(clone);
+            PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
         }
 
         foreach (var methodName in methodGroup.Select(m => m.Identifier.Text)) {
