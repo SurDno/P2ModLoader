@@ -29,14 +29,16 @@ public static class AssemblyPatcher {
             var updatedRoot = updatedTree.GetRoot();
             var classDeclarations = updatedRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
             var enumDeclarations = updatedRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
+            var interfaceDeclarations = updatedRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
             var methodDeclarations = updatedRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
             var propertyDeclarations = updatedRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
 
             var hasClass = classDeclarations.Count != 0;
             var hasEnum = enumDeclarations.Count != 0;
+            var hasInterface = interfaceDeclarations.Count != 0;
 
-            if (!hasClass && !hasEnum) {
-                ErrorHandler.Handle($"No classes or enums found in the source file {updatedSourcePath}", null);
+            if (!hasClass && !hasEnum && !hasInterface) {
+                ErrorHandler.Handle($"No classes, enums or interfaces found in the source file {updatedSourcePath}", null);
                 return false;
             }
 
@@ -85,6 +87,23 @@ public static class AssemblyPatcher {
                 }
             }
 
+            if (hasInterface) {
+                var interfaceDecl  = interfaceDeclarations.First();
+                var namespaceDecl = interfaceDecl.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+                var namespaceName = namespaceDecl?.Name.ToString() ?? "";
+                var fullTypeName = string.IsNullOrEmpty(namespaceName) ? interfaceDecl.Identifier.Text
+                    : $"{namespaceName}.{interfaceDecl.Identifier.Text}";
+
+                var originalType = originalAssembly.MainModule.GetType(fullTypeName);
+                if (originalType == null) {
+                    Logger.LogInfo($"Adding new interface {fullTypeName}.");
+                    if (!TryAddNewType(references, namespaceDecl, interfaceDecl, originalAssembly, readerParams))
+                        return false;
+                } else {
+                    Logger.LogError($"Interface {fullTypeName} already exists; can't patch existing interfaces.");
+                }
+            }
+            
             if (hasClass) {
                 var classDecl = classDeclarations.First();
                 var namespaceDecl = classDecl.Ancestors().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
@@ -191,6 +210,7 @@ public static class AssemblyPatcher {
         var typeName = typeDecl switch {
             ClassDeclarationSyntax c => c.Identifier.Text,
             EnumDeclarationSyntax e => e.Identifier.Text,
+            InterfaceDeclarationSyntax i => i.Identifier.Text,
             _ => ""
         };
 
