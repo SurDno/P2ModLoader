@@ -2,6 +2,7 @@ using System.Diagnostics;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.WindowsFormsExtensions;
 
@@ -19,6 +20,7 @@ public class ModsTab : BaseTab {
     public event Action? ModsChanged;
 
     public ModsTab(TabPage page) : base(page) {
+        using var perf = PerformanceLogger.Log();
         _isRefreshing = false;
 
         InitializeComponents();
@@ -36,6 +38,7 @@ public class ModsTab : BaseTab {
     }
 
     public bool HasFileConflicts() {
+        using var perf = PerformanceLogger.Log();
         var allMods = ModManager.Mods.ToList();
         return allMods.Any(mod => {
             var display = ConflictManager.GetConflictDisplay(mod, allMods);
@@ -44,11 +47,13 @@ public class ModsTab : BaseTab {
     }
 
     private void OnSettingChanged() {
+        using var perf = PerformanceLogger.Log();
         if (_modListView?.InvokeRequired != true) return;
         _modListView.Invoke(OnSettingChanged);
     }
 
     private void OnModsLoaded() {
+        using var perf = PerformanceLogger.Log();
         if (_modListView!.InvokeRequired) {
             _modListView.Invoke(RefreshModList);
         } else {
@@ -57,6 +62,7 @@ public class ModsTab : BaseTab {
     }
 
     private void UpdateUiState() {
+        using var perf = PerformanceLogger.Log();
         if (_mainContainer == null) return;
 
         var installPath = SettingsHolder.InstallPath;
@@ -78,6 +84,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ShowMessage(string message, bool showButton) {
+        using var perf = PerformanceLogger.Log();
         if (_mainContainer == null || _messageContainer == null) return;
 
         _mainContainer.SuspendLayout();
@@ -91,6 +98,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ShowModList() {
+        using var perf = PerformanceLogger.Log();
         if (_mainContainer == null) return;
 
         _mainContainer.SuspendLayout();
@@ -115,6 +123,7 @@ public class ModsTab : BaseTab {
     }
 
     protected sealed override void InitializeComponents() {
+        using var perf = PerformanceLogger.Log();
         _mainContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 1,
@@ -128,6 +137,7 @@ public class ModsTab : BaseTab {
     }
 
     private void InitializeMessageContainer() {
+        using var perf = PerformanceLogger.Log();
         _messageContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -164,6 +174,7 @@ public class ModsTab : BaseTab {
     }
 
     private void InitializeModListView() {
+        using var perf = PerformanceLogger.Log();
         _modListView = new ListView {
             Dock = DockStyle.Fill,
             View = View.Details,
@@ -195,6 +206,7 @@ public class ModsTab : BaseTab {
     }
 
     private TableLayoutPanel CreateDescriptionContainer() {
+        using var perf = PerformanceLogger.Log();
         var descriptionContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -269,6 +281,7 @@ public class ModsTab : BaseTab {
     }
 
     private void SetAllModsChecked(bool value) {
+        using var perf = PerformanceLogger.Log();
         if (_modListView == null || _isRefreshing) return;
 
         try {
@@ -290,6 +303,7 @@ public class ModsTab : BaseTab {
     }
     
     private void InitializeButton_Click(object? sender, EventArgs e) {
+        using var perf = PerformanceLogger.Log();
         var installPath = SettingsHolder.InstallPath;
         if (string.IsNullOrEmpty(installPath)) return;
 
@@ -303,6 +317,7 @@ public class ModsTab : BaseTab {
     }
 
     private ListViewItem CreateListViewItem(Mod mod) {
+        using var perf = PerformanceLogger.Log();
         var item = new ListViewItem {
             Text = mod.Info.Name,
             Checked = mod.IsEnabled,
@@ -322,6 +337,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ModListView_ItemChecked(object? sender, ItemCheckedEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (_isRefreshing || e.Item.Tag is not Mod mod || _modListView == null) return;
 
         // Very dirty workaround to prevent isPatched being set to false during init.
@@ -335,6 +351,7 @@ public class ModsTab : BaseTab {
     }
 
     private void RefreshItem(ListViewItem item) {
+        using var perf = PerformanceLogger.Log();
         if (_isRefreshing || _modListView == null || item.Tag is not Mod mod) return;
 
         try {
@@ -361,6 +378,7 @@ public class ModsTab : BaseTab {
     }
 
     private void RefreshModList() {
+        using var perf = PerformanceLogger.Log();
         if (_isRefreshing || _modListView == null) return;
 
         try {
@@ -377,6 +395,7 @@ public class ModsTab : BaseTab {
     }
 
     private void InitializeEvents() {
+        using var perf = PerformanceLogger.Log();
         _modListView!.ItemDrag += ModListView_ItemDrag;
         _modListView!.DragOver += ModListView_DragOver;
         _modListView!.DragDrop += ModListView_DragDrop;
@@ -386,6 +405,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ModListView_SelectedIndexChanged(object? sender, EventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (_modListView!.SelectedItems.Count == 0) {
             _descriptionBox!.Text = string.Empty;
             _descriptionBox!.ForeColor = Color.Gray;
@@ -402,6 +422,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ModListView_MouseClick(object? sender, MouseEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (e.Button != MouseButtons.Right) return;
 
         var focusedItem = _modListView!.FocusedItem;
@@ -437,6 +458,7 @@ public class ModsTab : BaseTab {
     }
 
     private void ModListView_DragDrop(object? sender, DragEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         var targetPoint = _modListView!.PointToClient(new Point(e.X, e.Y));
         var targetItem = _modListView!.GetItemAt(targetPoint.X, targetPoint.Y);
         var draggedItem = (ListViewItem?)e.Data?.GetData(typeof(ListViewItem));

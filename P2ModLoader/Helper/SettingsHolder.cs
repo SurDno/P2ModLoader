@@ -1,4 +1,5 @@
 using P2ModLoader.Data;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Helper;
 
@@ -20,55 +21,61 @@ public static class SettingsHolder {
 	public static string? InstallPath {
 		get => _installPath;
 		set {
+			using var perf = PerformanceLogger.Log();
 			var isValid = value != null && File.Exists(Path.Combine(value, "Pathologic.exe"));
         
 			if (_installPath == value) return;
         
 			_installPath = isValid ? value : null;
 			InstallPathChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(InstallPath)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(InstallPath)} changed to: {value}");
 		}
 	}
 
 	public static bool AllowStartupWithConflicts {
 		get => _allowStartupWithConflicts;
 		set {
+			using var perf = PerformanceLogger.Log();
 			_allowStartupWithConflicts = value;
 			StartupWithConflictsChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(AllowStartupWithConflicts)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(AllowStartupWithConflicts)} changed to: {value}");
 		}
 	}
 
 	public static bool IsPatched {
 		get => _isPatched;
 		set {
+			using var perf = PerformanceLogger.Log();
 			if (_isPatched == value) return;
 			_isPatched = value;
 			PatchStatusChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(IsPatched)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(IsPatched)} changed to: {value}");
 		}
 	}
 
 	public static bool CheckForUpdatesOnStartup {
 		get => _checkForUpdatesOnStartup;
 		set {
+			using var perf = PerformanceLogger.Log();
 			if (_checkForUpdatesOnStartup == value) return;
 			_checkForUpdatesOnStartup = value;
 			CheckForUpdatesOnStartupChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(CheckForUpdatesOnStartup)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(CheckForUpdatesOnStartup)} changed to: {value}");
 		}
 	}
 
 	public static IReadOnlyList<SavedModState> LastKnownModState {
 		get => _lastKnownModState.AsReadOnly();
 		set {
+			using var perf = PerformanceLogger.Log();
 			_lastKnownModState = value.ToList();
 			ModStateChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(LastKnownModState)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(LastKnownModState)} changed to: {value}");
 		}
 	}
 
 	public static void UpdateModState(IEnumerable<Mod> mods) {
+		using var perf = PerformanceLogger.Log();
 		_lastKnownModState = mods.Select(mod => new SavedModState(
 			mod.FolderName,
 			mod.IsEnabled,
@@ -80,10 +87,11 @@ public static class SettingsHolder {
 	public static Size WindowSize {
 		get => _windowSize;
 		set {
+			using var perf = PerformanceLogger.Log();
 			if (_windowSize == value) return;
 			_windowSize = value;
 			WindowSizeChanged?.Invoke();
-			Logger.LogInfo($"Setting {nameof(WindowSize)} changed to: {value}");
+			Logger.Log(LogLevel.Info, $"Setting {nameof(WindowSize)} changed to: {value}");
 		}
 	}
 }

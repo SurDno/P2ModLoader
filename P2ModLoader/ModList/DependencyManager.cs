@@ -1,5 +1,6 @@
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
@@ -11,10 +12,12 @@ public static class DependencyManager {
     }
 
     private static string Normalize(string path) {
+        using var perf = PerformanceLogger.Log();
         return new DirectoryInfo(path.TrimEnd('/', '\\')).Name.ToLowerInvariant();
     }
 
     public static DependencyValidation ValidateDependencies(Mod mod, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         if (!mod.IsEnabled) {
             return new DependencyValidation();
         }
@@ -85,6 +88,7 @@ public static class DependencyManager {
     }
 
     public static bool HasDependencyErrors(IEnumerable<Mod> mods) {
+        using var perf = PerformanceLogger.Log();
         return mods.Where(m => m.IsEnabled).Any(mod => ValidateDependencies(mod, mods).HasErrors);
     }
 }

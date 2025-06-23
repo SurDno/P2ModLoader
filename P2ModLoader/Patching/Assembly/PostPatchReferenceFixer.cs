@@ -1,9 +1,11 @@
 using Mono.Cecil;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly;
 
 public static class PostPatchReferenceFixer {
     public static void FixReferencesForPatchedType(TypeDefinition type, string tempAsm, ModuleDefinition module) {
+        using var perf = PerformanceLogger.Log();
         for (var i = module.AssemblyReferences.Count - 1; i >= 0; i--) {
             if (module.AssemblyReferences[i].Name == tempAsm) {
                 module.AssemblyReferences.RemoveAt(i);
@@ -77,6 +79,7 @@ public static class PostPatchReferenceFixer {
     }
 
     private static MethodDefinition? FindLocalMethod(TypeDefinition originalType, MethodReference oldMethodRef) {
+        using var perf = PerformanceLogger.Log();
         var matching = originalType.Methods.Where(m => m.Name == oldMethodRef.Name
                                                        && m.Parameters.Count == oldMethodRef.Parameters.Count);
 

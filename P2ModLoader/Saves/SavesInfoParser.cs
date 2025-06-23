@@ -1,3 +1,5 @@
+using P2ModLoader.Logging;
+
 namespace P2ModLoader.Saves;
 
 public static class SavesInfoParser {
@@ -36,6 +38,7 @@ public static class SavesInfoParser {
 	};
 
 	public static string? Parse(string save, bool isLast) {
+		using var perf = PerformanceLogger.Log();
 		if (string.IsNullOrEmpty(save)) return null;
 
 		var parts = save.Split('-');
@@ -54,6 +57,7 @@ public static class SavesInfoParser {
 
 
 	public static DateTime? ParseDate(string save) {
+		using var perf = PerformanceLogger.Log();
 		var parts = save.Split('-');
 		if (parts.Length < 6) return null;
 

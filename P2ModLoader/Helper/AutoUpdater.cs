@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using System.Reflection;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Helper;
 
@@ -34,6 +35,7 @@ public static partial class AutoUpdater {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     static AutoUpdater() {
+        using var perf = PerformanceLogger.Log();
         var versionInfo = Assembly.GetExecutingAssembly().GetName().Version!;
         CurrentVersion = $"{versionInfo.Major}.{versionInfo.Minor}.{versionInfo.Build}";
 
@@ -42,7 +44,8 @@ public static partial class AutoUpdater {
     }
     
     public static async Task CheckForUpdatesAsync(bool showNoUpdatesDialog = false) {
-        Logger.LogInfo("Initiating update check...");
+        using var perf = PerformanceLogger.Log();
+        Logger.Log(LogLevel.Info, $"Initiating update check...");
         try {
             var releases = await GetAllReleasesAsync();
             if (releases == null || releases.Count == 0 || releases[0].Assets.Count == 0) {
@@ -52,7 +55,7 @@ public static partial class AutoUpdater {
 
             var latestRelease = releases[0];
             var newVersion = latestRelease.TagName.TrimStart('v');
-            Logger.LogInfo($"Latest version is: {newVersion}, current version is: {CurrentVersion}");
+            Logger.Log(LogLevel.Info, $"Latest version is: {newVersion}, current version is: {CurrentVersion}");
 
             if (!IsNewer(newVersion)) {
                 if (showNoUpdatesDialog)
@@ -76,11 +79,13 @@ public static partial class AutoUpdater {
     }
 
     private static async Task<List<GitHubRelease>?> GetAllReleasesAsync() {
+        using var perf = PerformanceLogger.Log();
         var response = await Client.GetStringAsync($"https://api.github.com/repos/{OWNER}/{REPO}/releases");
         return JsonSerializer.Deserialize<List<GitHubRelease>>(response, JsonOptions) ?? [];
     }
 
     private static string GetCumulativeReleaseNotes(List<GitHubRelease> releases) {
+        using var perf = PerformanceLogger.Log();
         var relevantReleases = releases.Where(r => IsNewer(r.TagName)).OrderBy(r => Version.Parse(r.TagName));
 
         var notes = new System.Text.StringBuilder();
@@ -98,6 +103,7 @@ public static partial class AutoUpdater {
     public static bool IsNewer(string version) => Version.Parse(version) > Version.Parse(CurrentVersion);
 
     private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) {
+        using var perf = PerformanceLogger.Log();
         Directory.CreateDirectory(UpdateDirectory);
 
         var assetUrl = release.Assets[0].BrowserDownloadUrl;
@@ -123,15 +129,15 @@ public static partial class AutoUpdater {
             Verb = "runas"
         };
     
-        Logger.LogInfo("Attempting to start update script...");
+        Logger.Log(LogLevel.Info, $"Attempting to start update script...");
         var process = Process.Start(startInfo);
     
         await Task.Delay(500);
         if (process != null) {
-            Logger.LogInfo($"Update script started with PID: {process.Id}.");
+            Logger.Log(LogLevel.Info, $"Update script started with PID: {process.Id}.");
             Environment.Exit(0);
         } else {
-            Logger.LogError("Failed to start update script.");
+            Logger.Log(LogLevel.Error, $"Failed to start update script.");
             MessageBox.Show("An update was downloaded but failed to replace the current version automatically." +
                             $"To update, close P2ModLoader, go to {extractPath} and launch update.bat manually.",
                             "Auto-update error", MessageBoxButtons.OK);
@@ -139,6 +145,7 @@ public static partial class AutoUpdater {
     }
 
     private static string CreateUpdateScript(string updatePath) {
+        using var perf = PerformanceLogger.Log();
         var scriptPath = Path.Combine(UpdateDirectory, "update.bat");
         var currentExe = Environment.ProcessPath;
 

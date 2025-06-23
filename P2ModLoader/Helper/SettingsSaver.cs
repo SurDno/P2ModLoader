@@ -1,9 +1,10 @@
 using P2ModLoader.Data;using System.Text.Json;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Helper;
 
 public static class SettingsSaver {
-    private static readonly string SettingsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "SETTINGS");
+    private static readonly string SettingsDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Settings");
     private static readonly string SettingsPath = Path.Combine(SettingsDirectory, "settings.json");
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     private static bool _subscribed;
@@ -22,12 +23,13 @@ public static class SettingsSaver {
     public static void UnpauseSaving() => _pauseSaving = false; 
     
     public static void LoadSettings() {
+        using var perf = PerformanceLogger.Log();
         if (File.Exists(SettingsPath)) {
             try {
                 var settings = JsonSerializer.Deserialize<SavedSettings>(File.ReadAllText(SettingsPath));
 
                 if (settings == null) {
-                    Logger.LogInfo("No settings.json file has been found, default settings will be used.");
+                    Logger.Log(LogLevel.Info, $"No settings.json file has been found, default settings will be used.");
                     return;
                 }
 
@@ -37,7 +39,7 @@ public static class SettingsSaver {
                 SettingsHolder.CheckForUpdatesOnStartup = settings.CheckForUpdates;
                 SettingsHolder.LastKnownModState = settings.ModState;
                 SettingsHolder.WindowSize = settings.WindowSize;
-                Logger.LogInfo("Applied settings from settings.json.");
+                Logger.Log(LogLevel.Info, $"Applied settings from settings.json.");
             } catch (Exception ex) {
                 ErrorHandler.Handle("Failed to load settings", ex);
             }
@@ -54,9 +56,10 @@ public static class SettingsSaver {
     }
     
     private static void SaveSettings() {
+        using var perf = PerformanceLogger.Log();
         if (_pauseSaving) return;
         
-        Logger.LogInfo($"Saving new settings to settings.json.");
+        Logger.Log(LogLevel.Info, $"Saving new settings to settings.json.");
         try {
             Directory.CreateDirectory(SettingsDirectory);
             

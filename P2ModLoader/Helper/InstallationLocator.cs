@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Helper;
 
@@ -20,6 +21,7 @@ public static class InstallationLocator {
     private const string LOGFILE_NAME = @"output_log.txt";
     
     public static string? FindSteam() {
+        using var perf = PerformanceLogger.Log();
         var steamPath = GetSteamPathFromRegistry(STEAM_32_BIT_PATH);
         steamPath ??= GetSteamPathFromRegistry(STEAM_64_BIT_PATH);
 
@@ -34,9 +36,10 @@ public static class InstallationLocator {
     }
 
     public static string? FindInstall() {
+        using var perf = PerformanceLogger.Log();
         var steamPath = FindSteam();
         if (!string.IsNullOrEmpty(steamPath)) {
-            Logger.LogInfo("Found Steam installation:   " + steamPath);
+            Logger.Log(LogLevel.Info, $"Found Steam installation: {steamPath}");
             return FindSteamInstall(steamPath);
         }
 
@@ -45,8 +48,8 @@ public static class InstallationLocator {
     }
 
     private static string? FindSteamInstall(string steamPath) {
+        using var perf = PerformanceLogger.Log();
         var libraryFoldersPath = Path.Combine(steamPath, STEAM_LIBRARY_FOLDERS_PATH);
-        Logger.LogInfo("libraryFoldersPath: " + libraryFoldersPath + " ; " + File.Exists(libraryFoldersPath));
         if (!File.Exists(libraryFoldersPath)) {
             libraryFoldersPath = Path.Combine(steamPath, STEAM_LIBRARY_FOLDERS_PATH.ToLower());
             if (!File.Exists(libraryFoldersPath)) {
@@ -55,16 +58,18 @@ public static class InstallationLocator {
         }
 
         var installPath = FindPathologicSteamPath(libraryFoldersPath);
-        Logger.LogInfo("installPath: " + installPath);
+        Logger.Log(LogLevel.Info, $"installPath: {installPath}");
         return installPath;
     }
 
     private static string? GetSteamPathFromRegistry(string registryPath) {
+        using var perf = PerformanceLogger.Log();
         using var key = Registry.LocalMachine.OpenSubKey(registryPath);
         return key?.GetValue("InstallPath") as string;
     }
 
     private static string? FindPathologicSteamPath(string libraryFoldersPath) {
+        using var perf = PerformanceLogger.Log();
         var content = File.ReadAllText(libraryFoldersPath);
 
         var pathRegex = new Regex("\"path\"\\s+\"([^\"]+)\"");
@@ -98,14 +103,16 @@ public static class InstallationLocator {
     }
 
     public static string? FindAppData() {
+        using var perf = PerformanceLogger.Log();
         var userPath = Environment.GetEnvironmentVariable("USERPROFILE");
         var appdataPath = Path.Combine(userPath!, APPDATA_PATH);
-        Logger.LogInfo("appdata\n" + userPath + "\n" + appdataPath);
+        Logger.Log(LogLevel.Info, $"appdata\n{userPath}\n{appdataPath}");
 
         return Directory.Exists(appdataPath) ? appdataPath : null;
     }
 
     public static string FindLogFile() {
-        return Path.Combine(InstallationLocator.FindAppData()!, LOGFILE_NAME);
+        using var perf = PerformanceLogger.Log();
+        return Path.Combine(FindAppData()!, LOGFILE_NAME);
     }
 }

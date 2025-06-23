@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis.Emit;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using LanguageVersion = Microsoft.CodeAnalysis.CSharp.LanguageVersion;
 using MethodBody = Mono.Cecil.Cil.MethodBody;
 
@@ -15,6 +16,7 @@ namespace P2ModLoader.Patching.Assembly;
 
 public static class AssemblyPatcher {
     public static bool PatchAssembly(string dllPath, string updatedSourcePath) {
+        using var perf = PerformanceLogger.Log();
         var dllDirectory = Path.GetDirectoryName(Path.GetFullPath(dllPath))!;
         var fileCopy = Path.Combine(dllDirectory, $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
         File.Copy(dllPath, fileCopy, true);
@@ -78,12 +80,12 @@ public static class AssemblyPatcher {
                     if (!TryAddNewType(references, namespaceDecl, enumDecl, originalAssembly, readerParams))
                         return false;
 
-                    Logger.LogInfo($"Added new enum {fullTypeName}.");
+                    Logger.Log(LogLevel.Info, $"Added new enum {fullTypeName}.");
                 } else {
                     if (!EnumPatcher.UpdateEnum(originalType, enumDecl, originalAssembly))
                         return false;
 
-                    Logger.LogInfo($"Updated enum {fullTypeName} with new members.");
+                    Logger.Log(LogLevel.Info, $"Updated enum {fullTypeName} with new members.");
                 }
             }
 
@@ -96,11 +98,11 @@ public static class AssemblyPatcher {
 
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
                 if (originalType == null) {
-                    Logger.LogInfo($"Adding new interface {fullTypeName}.");
+                    Logger.Log(LogLevel.Info, $"Adding new interface {fullTypeName}.");
                     if (!TryAddNewType(references, namespaceDecl, interfaceDecl, originalAssembly, readerParams))
                         return false;
                 } else {
-                    Logger.LogError($"Interface {fullTypeName} already exists; can't patch existing interfaces.");
+                    Logger.Log(LogLevel.Error, $"Interface {fullTypeName} already exists; can't patch existing interfaces.");
                 }
             }
             
@@ -119,23 +121,23 @@ public static class AssemblyPatcher {
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
 
                 if (originalType == null) {
-                    Logger.LogInfo($"Adding new type {fullTypeName}.");
+                    Logger.Log(LogLevel.Info, $"Adding new type {fullTypeName}.");
                     if (!TryAddNewType(references, namespaceDecl, classDecl, originalAssembly, readerParams))
                         return false;
                 } else {
                     if (methodsForClass.Count != 0 || propertiesForClass.Count != 0) {
-                        Logger.LogInfo($"Updating class {fullTypeName} with new/changed members.");
+                        Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
                         if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, namespaceDecl,
                                 classDecl, methodsForClass, propertiesForClass, updatedRoot, references, readerParams))
                             return false;
                     } else {
-                        Logger.LogInfo($"Class {fullTypeName} found but no methods or properties to replace.");
+                        Logger.Log(LogLevel.Info, $"Class {fullTypeName} found but no methods or properties to replace.");
                     }
                 }
             }
 
             originalAssembly.Write(dllPath);
-            Logger.LogInfo($"Successfully patched assembly at {dllPath}");
+            Logger.Log(LogLevel.Info, $"Successfully patched assembly at {dllPath}");
             return true;
         } catch (Exception ex) {
             ErrorHandler.Handle("Error patching assembly", ex);
@@ -148,6 +150,7 @@ public static class AssemblyPatcher {
 
     private static bool TryAddNewType(List<MetadataReference> references, NamespaceDeclarationSyntax? namespaceDecl,
         MemberDeclarationSyntax typeDecl, AssemblyDefinition originalAssembly, ReaderParameters readerParams) {
+        using var perf = PerformanceLogger.Log();
         var compilationUnit = SyntaxFactory.CompilationUnit();
         var updatedRoot = typeDecl.SyntaxTree.GetRoot();
         var usings = ReferenceCollector.CollectAllUsings(updatedRoot);
@@ -206,6 +209,7 @@ public static class AssemblyPatcher {
     }
 
     private static string GetFullTypeName(NamespaceDeclarationSyntax? nsDecl, MemberDeclarationSyntax typeDecl) {
+        using var perf = PerformanceLogger.Log();
         var namespaceName = nsDecl?.Name.ToString() ?? "";
         var typeName = typeDecl switch {
             ClassDeclarationSyntax c => c.Identifier.Text,
@@ -228,6 +232,7 @@ public static class AssemblyPatcher {
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
         ReaderParameters readerParams) {
+        using var perf = PerformanceLogger.Log();
         string decompiledSource;
         try {
             decompiledSource = decompiler.DecompileTypeAsString(new FullTypeName(fullTypeName));
@@ -336,18 +341,18 @@ public static class AssemblyPatcher {
             var originalMethod = originalType.Methods.FirstOrDefault(m => m.Name == methodName);
 
             if (newMethod == null) {
-                Logger.LogWarning($"Could not find method {methodName} in the compiled assembly");
+                Logger.Log(LogLevel.Warning, $"Could not find method {methodName} in the compiled assembly");
                 continue;
             }
 
             if (originalMethod == null) {
-                Logger.LogInfo($"Adding new method {methodName} to type {fullTypeName}");
+                Logger.Log(LogLevel.Info, $"Adding new method {methodName} to type {fullTypeName}");
                 var importedMethod = CloneCreator.CloneMethod(newMethod, originalAssembly.MainModule);
                 originalType.Methods.Add(importedMethod);
-                Logger.LogInfo($"Added new method {methodName}");
+                Logger.Log(LogLevel.Info, $"Added new method {methodName}");
             } else {
                 ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
-                Logger.LogInfo($"Replaced method {methodName} in type {fullTypeName}");
+                Logger.Log(LogLevel.Info, $"Replaced method {methodName} in type {fullTypeName}");
             }
         }
 
@@ -372,7 +377,7 @@ public static class AssemblyPatcher {
                     var clonedGet = CloneCreator.CloneMethod(newProp.GetMethod, originalAssembly.MainModule);
                     originalType.Methods.Add(clonedGet);
                     originalProp.GetMethod = clonedGet;
-                    Logger.LogInfo($"Swapped in new get accessor of property {propName}");
+                    Logger.Log(LogLevel.Info, $"Swapped in new get accessor of property {propName}");
                 }
 
                 // Clear old set method (if exists)
@@ -385,7 +390,7 @@ public static class AssemblyPatcher {
                     var clonedSet = CloneCreator.CloneMethod(newProp.SetMethod, originalAssembly.MainModule);
                     originalType.Methods.Add(clonedSet);
                     originalProp.SetMethod = clonedSet;
-                    Logger.LogInfo($"Swapped in new set accessor of property {propName}");
+                    Logger.Log(LogLevel.Info, $"Swapped in new set accessor of property {propName}");
                 }
             }
         }
@@ -395,6 +400,7 @@ public static class AssemblyPatcher {
     }
 
     private static T? FindTypeDeclaration<T>(SyntaxNode node, string name) where T : TypeDeclarationSyntax {
+        using var perf = PerformanceLogger.Log();
         foreach (var child in node.ChildNodes()) {
             if (child is T typed && typed.Identifier.Text == name)
                 return typed;
@@ -411,6 +417,7 @@ public static class AssemblyPatcher {
         private bool addedNewMethods;
 
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) {
+            using var perf = PerformanceLogger.Log();
             foreach (var replacement in methodReplacements) {
                 if (node.Identifier.Text != replacement.Name)
                     continue;
@@ -430,6 +437,7 @@ public static class AssemblyPatcher {
         }
 
         public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node) {
+            using var perf = PerformanceLogger.Log();
             var updatedNode = (ClassDeclarationSyntax)base.VisitClassDeclaration(node);
             if (addedNewMethods) return updatedNode;
         
@@ -446,7 +454,8 @@ public static class AssemblyPatcher {
     }
 
     private static void PrintCompilationFailure(EmitResult result, SyntaxTree tree) {
-        Logger.LogError("Compilation failed!");
+        using var perf = PerformanceLogger.Log();
+        Logger.Log(LogLevel.Error, $"Compilation failed!");
         foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)) {
             var lineSpan = diagnostic.Location.GetLineSpan();
             var sourceText = tree.GetText();
@@ -454,15 +463,16 @@ public static class AssemblyPatcher {
                 ? sourceText.Lines[lineSpan.StartLinePosition.Line].ToString()
                 : "<unknown>";
 
-            Logger.LogInfo($"{diagnostic.Id}: {diagnostic.GetMessage()}");
-            Logger.LogInfo($"Location: {lineSpan}");
-            Logger.LogInfo($"Source line: {errorLine}");
-            Logger.LogLineBreak();
+            Logger.Log(LogLevel.Info, $"{diagnostic.Id}: {diagnostic.GetMessage()}");
+            Logger.Log(LogLevel.Info, $"Location: {lineSpan}");
+            Logger.Log(LogLevel.Info, $"Source line: {errorLine}");
+            Logger.LogLineBreak(LogLevel.Info);
         }
     }
 
     private static void ReplaceMethodBody(MethodDefinition originalMethod, MethodDefinition newMethod,
         ModuleDefinition targetModule) {
+        using var perf = PerformanceLogger.Log();
         originalMethod.Body = new MethodBody(originalMethod);
         originalMethod.Attributes = newMethod.Attributes;
 

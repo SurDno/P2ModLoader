@@ -1,6 +1,7 @@
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching.Assembly;
 using P2ModLoader.Patching.Assets;
@@ -15,6 +16,7 @@ public static class GamePatcher {
     private static ProgressForm? _progressForm;
 
     public static bool TryPatch() {
+        using var perf = PerformanceLogger.Log();
         using var form = _progressForm = new ProgressForm();
         try {
             _progressForm.Show();
@@ -24,10 +26,10 @@ public static class GamePatcher {
 
             var enabledMods = ModManager.Mods.Where(m => m.IsEnabled).ToList();
             EnabledModsTracker.SaveEnabledMods(enabledMods);
-            Logger.LogInfo("Preparing to patch...");
+            Logger.Log(LogLevel.Info, $"Preparing to patch...");
 
             if (!TryProcessMods(enabledMods)) return false;
-            Logger.LogInfo($"Finished loading {enabledMods.Count} mods.");
+            Logger.Log(LogLevel.Info, $"Finished loading {enabledMods.Count} mods.");
             SettingsHolder.IsPatched = true;
             return true;
         } catch (Exception ex) {
@@ -37,9 +39,10 @@ public static class GamePatcher {
     }
 
     private static bool TryProcessMods(List<Mod> enabledMods) {
+        using var perf = PerformanceLogger.Log();
         for (var index = 0; index < enabledMods.Count; index++) {
             var mod = enabledMods[index];
-            Logger.LogInfo($"Processing mod {mod.Info.Name}");
+            Logger.Log(LogLevel.Info, $"Processing mod {mod.Info.Name}");
             _progressForm?.UpdateProgress(index, enabledMods.Count, $"Loading mod: {mod.Info.Name}");
 
             var managedPath = Path.Combine(mod.FolderPath, MANAGED_PATH);
@@ -55,6 +58,7 @@ public static class GamePatcher {
     }
 
     private static bool TryProcessAssemblies(string modAssemblyPath, Mod mod) {
+        using var perf = PerformanceLogger.Log();
         foreach (var source in Directory.GetFileSystemEntries(modAssemblyPath)) {
             var name = Path.GetFileName(source);
             var target = Path.Combine(SettingsHolder.InstallPath!, MANAGED_PATH, name);
@@ -78,6 +82,7 @@ public static class GamePatcher {
     }
     
     private static bool PatchAssemblyWithCodeFiles(string directory, string assemblyPath, Mod mod) {
+        using var perf = PerformanceLogger.Log();
         var codeFiles = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories).ToList();
         var loadFirstFiles = mod.Info.LoadFirst.Select(f => Path.Combine(directory, f)).Where(File.Exists).ToList();
         codeFiles = loadFirstFiles.Concat(codeFiles.Except(loadFirstFiles)).ToList();
@@ -92,6 +97,7 @@ public static class GamePatcher {
     }
 
     private static bool ProcessAssets(string modAssetsPath, Mod mod) {
+        using var perf = PerformanceLogger.Log();
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
             if (directory.EndsWith(MANAGED_PATH.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)) continue;
 
@@ -99,19 +105,19 @@ public static class GamePatcher {
             var targetPath = Path.Combine(SettingsHolder.InstallPath!, ASSETS_PATH, assetsFileName);
 
             BackupManager.CreateBackup(targetPath);
-            Logger.LogInfo($"Backing up assets file: {targetPath}");
+            Logger.Log(LogLevel.Info, $"Backing up assets file: {targetPath}");
             _progressForm?.UpdateProgress($"Backing up assets file: {assetsFileName}");
 
             _progressForm?.UpdateProgress($"Updating assets file {assetsFileName} for mod {mod.Info.Name}");
-            if (!AssetsFilePatcher.PatchAssetsFile(targetPath, directory)) {
-                ErrorHandler.Handle($"Failed to patch assets file {assetsFileName}", null);
-                return false;
-            }
+            if (AssetsFilePatcher.PatchAssetsFile(targetPath, directory)) continue;
+            ErrorHandler.Handle($"Failed to patch assets file {assetsFileName}", null);
+            return false;
         }
         return true;
     }
 
     private static bool ProcessXmlData(string modDataPath, Mod mod) {
+        using var perf = PerformanceLogger.Log();
         var xmlFiles = Directory.GetFiles(modDataPath, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || 
                         f.EndsWith(".xml.gz", StringComparison.OrdinalIgnoreCase));

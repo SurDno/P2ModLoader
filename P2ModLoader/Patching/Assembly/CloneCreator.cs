@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly;
 
@@ -11,6 +12,7 @@ public static class CloneCreator {
         Dictionary<Instruction, Instruction> instructionMap,
         IGenericParameterProvider contextProvider,
         TypeDefinition currentType) {
+        using var perf = PerformanceLogger.Log();
         var opcode = instruction.OpCode;
         var operand = instruction.Operand;
 
@@ -114,6 +116,7 @@ public static class CloneCreator {
     }
 
     public static TypeDefinition CloneType(TypeDefinition typeToClone, ModuleDefinition targetModule) {
+        using var perf = PerformanceLogger.Log();
         var newType = new TypeDefinition(
             typeToClone.Namespace,
             typeToClone.Name,
@@ -188,6 +191,7 @@ public static class CloneCreator {
     }
 
     public static MethodDefinition CloneMethod(MethodDefinition methodToClone, ModuleDefinition targetModule) {
+        using var perf = PerformanceLogger.Log();
         var newMethod = new MethodDefinition(
             methodToClone.Name,
             methodToClone.Attributes,
@@ -258,6 +262,7 @@ public static class CloneCreator {
 
     public static void CloneAttributes(ICustomAttributeProvider source, ICustomAttributeProvider target,
         ModuleDefinition targetModule) {
+        using var perf = PerformanceLogger.Log();
         foreach (var attribute in source.CustomAttributes) {
             var importedAttribute = new CustomAttribute(targetModule.ImportReference(attribute.Constructor));
 
@@ -286,6 +291,7 @@ public static class CloneCreator {
     
     [SuppressMessage("ReSharper", "InvertIf")]
     public static PropertyDefinition CloneProperty(PropertyDefinition prop, ModuleDefinition module, TypeDefinition type) {
+        using var perf = PerformanceLogger.Log();
         PropertyDefinition newProperty = new (prop.Name, prop.Attributes, module.ImportReference(prop.PropertyType));
 
         CloneAttributes(prop, newProperty, module);

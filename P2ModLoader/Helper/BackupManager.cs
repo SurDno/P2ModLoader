@@ -1,3 +1,5 @@
+using P2ModLoader.Logging;
+
 namespace P2ModLoader.Helper;
 
 public static class BackupManager {
@@ -7,6 +9,7 @@ public static class BackupManager {
 	private static string BackupFolderPath => Path.Combine(SettingsHolder.InstallPath!, BACKUPS_RELATIVE_PATH);
 	
 	public static bool TryRecoverBackups() {
+		using var perf = PerformanceLogger.Log();
 		if (SettingsHolder.InstallPath == null)
 			return false;
 
@@ -32,6 +35,7 @@ public static class BackupManager {
 	}
 	
 	public static string? CreateBackup(string filePath) {
+		using var perf = PerformanceLogger.Log();
 		if (SettingsHolder.InstallPath == null)
 			return null;
 		
@@ -44,7 +48,7 @@ public static class BackupManager {
 		try {
 			Directory.CreateDirectory(Path.GetDirectoryName(backupPath)!);
 		} catch {
-			Logger.LogError($"Cannot create necessary directory: {relativePath} {backupPath}");
+			Logger.Log(LogLevel.Error, $"Cannot create necessary directory: {relativePath} {backupPath}");
 		}
 
 		// Never overwrite existing backups if two mods modify the same file.
@@ -55,6 +59,7 @@ public static class BackupManager {
 	}
 	
 	public static string? GetBackupPath(string filePath) {
+		using var perf = PerformanceLogger.Log();
 		if (SettingsHolder.InstallPath == null)
 			return null;
         

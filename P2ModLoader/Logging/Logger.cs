@@ -1,10 +1,15 @@
-namespace P2ModLoader.Helper;
+using System.Runtime.CompilerServices;
+using P2ModLoader.Helper;
+
+namespace P2ModLoader.Logging;
 
 public static class Logger {
     private static readonly string ExeLogFilePath;
     private static readonly object LockObject = new();
     private static readonly List<string> BufferedLogs = [];
     private static string? _lastInstallLogPath;
+    
+    public static LogLevel MinimumLevel { get; set; } = LogLevel.Performance;
 
     static Logger() {
         var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
@@ -13,9 +18,7 @@ public static class Logger {
         File.Delete(ExeLogFilePath);
     }
 
-    public static string GetLogPath() {
-        return GetInstallLogPath() ?? ExeLogFilePath;
-    }
+    public static string GetLogPath() => GetInstallLogPath() ?? ExeLogFilePath;
 
     private static string? GetInstallLogPath() {
         if (string.IsNullOrEmpty(SettingsHolder.InstallPath))
@@ -24,13 +27,11 @@ public static class Logger {
         var installLogDirectory = Path.Combine(SettingsHolder.InstallPath, "Logs");
         return !Directory.Exists(installLogDirectory) ? null : Path.Combine(installLogDirectory, "P2ModLoader.log");
     }
-    
-    private static void HandleInstallPathChange(string? newInstallLogPath) {
-        if (newInstallLogPath != null && newInstallLogPath != _lastInstallLogPath) {
+
+    private static void HandleInstallPathChange(string newInstallLogPath) {
+        if (newInstallLogPath != _lastInstallLogPath) {
             File.WriteAllLines(newInstallLogPath, BufferedLogs);
             _lastInstallLogPath = newInstallLogPath;
-        } else if (newInstallLogPath == null) {
-            _lastInstallLogPath = null;
         }
     }
 
@@ -53,8 +54,15 @@ public static class Logger {
         }
     }
 
-    public static void LogError(string message) => WriteToLogs($"ERROR: {message}");
-    public static void LogWarning(string message) => WriteToLogs($"WARNING: {message}");
-    public static void LogInfo(string message) => WriteToLogs($"INFO: {message}");
-    public static void LogLineBreak() => WriteToLogs(string.Empty, timestamped: false);
+    public static void Log(LogLevel lvl, [InterpolatedStringHandlerArgument("lvl")] LogInterpolatedStringHandler handler) {
+        if (lvl > MinimumLevel || MinimumLevel == LogLevel.None)
+            return;
+
+        WriteToLogs($"{lvl.ToString().ToUpper()}: {handler.ToString()}");
+    }
+
+    public static void LogLineBreak(LogLevel lvl) {
+        if (lvl > MinimumLevel || MinimumLevel == LogLevel.None) return;
+        WriteToLogs(string.Empty, timestamped: false);
+    }
 }

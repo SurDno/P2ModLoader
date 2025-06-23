@@ -1,3 +1,5 @@
+using P2ModLoader.Logging;
+
 namespace P2ModLoader.Helper;
 
 public static class FontHelper {
@@ -11,6 +13,7 @@ public static class FontHelper {
 	];
 
 	public static Font GetMonospaceFont(float size = 9F) {
+		using var perf = PerformanceLogger.Log();
 		foreach (var fontName in MonospaceFonts) {
 			if (!IsFontInstalled(fontName)) continue;
 			return new Font(fontName, size, FontStyle.Regular, GraphicsUnit.Point);
@@ -20,6 +23,7 @@ public static class FontHelper {
 	}
 
 	private static bool IsFontInstalled(string fontName) {
+		using var perf = PerformanceLogger.Log();
 		using var testFont = new Font(fontName, 8.25f, FontStyle.Regular, GraphicsUnit.Point);
 		return testFont.Name.Equals(fontName, StringComparison.InvariantCultureIgnoreCase);
 	}

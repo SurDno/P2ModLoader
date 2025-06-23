@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Forms;
 
@@ -7,6 +8,7 @@ public class ProgressForm : Form {
 	private readonly Label _statusLabel;
 
 	public ProgressForm() {
+		using var perf = PerformanceLogger.Log();
 		Width = 800;
 		Height = 200;
 		FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -44,6 +46,7 @@ public class ProgressForm : Form {
 	}
 
 	public void UpdateProgress(int current, int total, string status) {
+		using var perf = PerformanceLogger.Log();
 		if (InvokeRequired) {
 			Invoke(() => UpdateProgress(current, total, status));
 			return;
@@ -56,6 +59,7 @@ public class ProgressForm : Form {
 	}
 
 	public void UpdateProgress(string status) {
+		using var perf = PerformanceLogger.Log();
 		if (InvokeRequired) {
 			Invoke(() => UpdateProgress(_progressBar.Value, _progressBar.Maximum, status));
 			return;

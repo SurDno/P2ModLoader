@@ -1,3 +1,5 @@
+using P2ModLoader.Logging;
+
 namespace P2ModLoader.Data;
 
 public class Mod {
@@ -15,6 +17,7 @@ public class Mod {
 	}
 
 	public Mod(string folderPath) {
+		using var perf = PerformanceLogger.Log();
 		FolderPath = folderPath;
 		var infoPath = Path.Combine(folderPath, "ModInfo.ltx");
 		Info = ModInfo.FromFile(infoPath);
@@ -23,6 +26,7 @@ public class Mod {
 	}
 
 	public string GetModificationTypes() {
+		using var perf = PerformanceLogger.Log();
 		var modTypes = new List<string>();
     
 		AddToListIfDefinitionExists(modTypes, "dll", ".dll files", FolderPath);
@@ -36,6 +40,7 @@ public class Mod {
 	}
 
 	private static void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) {
+		using var perf = PerformanceLogger.Log();
 		if (Directory.Exists(path) && Directory.GetFiles(path, $"*.{ext}", SearchOption.AllDirectories).Length != 0) 
 			modTypes.Add(result);
 	}

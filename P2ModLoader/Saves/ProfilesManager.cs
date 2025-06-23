@@ -1,5 +1,6 @@
 using System.Xml;
 using System.Xml.Linq;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Saves;
 
@@ -8,12 +9,14 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
 
     public int CurrentProfileIndex {
         get {
+            using var perf = PerformanceLogger.Log();
             var indexStr = _profilesDoc?.Root?.Element("CurrentIndex")?.Value;
             return int.TryParse(indexStr, out var index) ? index : -1;
         }
     }
 
     public void LoadProfiles() {
+        using var perf = PerformanceLogger.Log();
         if (!File.Exists(profilesPath)) return;
 
         try {
@@ -26,10 +29,12 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
     }
 
     public IEnumerable<(XElement Profile, int Index)> GetProfiles() {
+        using var perf = PerformanceLogger.Log();
         return _profilesDoc!.Root!.Elements("Profiles").First().Elements("Item").Select((p, i) => (p, i));
     }
 
     public void DeleteProfile(XElement profileElement) {
+        using var perf = PerformanceLogger.Log();
         var profileName = profileElement.Element("Name")?.Value;
         if (profileName == null) return;
 
@@ -51,6 +56,7 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
     }
 
     private void SaveXmlDocument() {
+        using var perf = PerformanceLogger.Log();
         if (_profilesDoc == null) return;
 
         var xmlSettings = new XmlWriterSettings {
@@ -65,6 +71,7 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
     }
 
     public void RenameProfile(XElement profileElement, string newFullName) {
+        using var perf = PerformanceLogger.Log();
         var oldName = profileElement.Element("Name")?.Value;
         if (string.IsNullOrEmpty(oldName))
             throw new InvalidOperationException("Profile name not found");

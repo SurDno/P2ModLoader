@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using P2ModLoader.Logging;
 using P2ModLoader.Patching;
 
 namespace P2ModLoader.Helper {
@@ -6,6 +7,7 @@ namespace P2ModLoader.Helper {
 		private const string EXE_PATH = "Pathologic.exe";
 
 		public static void LaunchExe() {
+			using var perf = PerformanceLogger.Log();
 			if (SettingsHolder.InstallPath == null)
 				return;
 
@@ -20,6 +22,7 @@ namespace P2ModLoader.Helper {
 		}
 
 		public static void LaunchSteam() {
+			using var perf = PerformanceLogger.Log();
 			if (SettingsHolder.InstallPath == null)
 				return;
 

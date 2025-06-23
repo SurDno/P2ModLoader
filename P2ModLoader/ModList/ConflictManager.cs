@@ -1,4 +1,5 @@
 using P2ModLoader.Data;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
@@ -27,10 +28,12 @@ public static class ConflictManager {
     private static readonly Color PatchColor = Color.LightGreen;
 
     private static string NormalizePath(string path) {
+        using var perf = PerformanceLogger.Log();
         return new DirectoryInfo(path.TrimEnd('/', '\\')).Name.ToLowerInvariant();
     }
 
     private static IEnumerable<ConflictInfo> GetConflicts(Mod mod, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         if (!mod.IsEnabled) return [];
 
         var allModsList = allMods.ToList();
@@ -76,6 +79,7 @@ public static class ConflictManager {
 
 
     private static IEnumerable<ConflictInfo> GetFileConflicts(Mod mod, Mod otherMod, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         var extensions = new[] { "*.dll", "*.cs", "*.xml", "*.xml.gz" };
     
         foreach (var extension in extensions) {
@@ -98,6 +102,7 @@ public static class ConflictManager {
     }
 
     private static IEnumerable<ConflictInfo> GetPaths(Mod mod, Mod otherMod, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         var myPaths = GetAllPaths(mod.FolderPath);
 
         foreach (var myPath in myPaths) {
@@ -133,6 +138,7 @@ public static class ConflictManager {
     }
 
     private static bool IsConflictResolved(Mod mod1, Mod mod2, string? relativePath, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         var mod1Folder = NormalizePath(mod1.FolderPath);
         var mod2Folder = NormalizePath(mod2.FolderPath);
 
@@ -169,6 +175,7 @@ public static class ConflictManager {
     }
 
     public static ModConflictDisplay GetConflictDisplay(Mod mod, IEnumerable<Mod> allMods) {
+        using var perf = PerformanceLogger.Log();
         var conflicts = GetConflicts(mod, allMods).ToList();
 
         var patches = conflicts.Where(c => c.Type == ConflictType.Patch).ToList();
@@ -201,6 +208,7 @@ public static class ConflictManager {
     }
 
     private static IEnumerable<string> GetAllPaths(string rootPath) {
+        using var perf = PerformanceLogger.Log();
         return Directory.GetFiles(rootPath, "*.*", SearchOption.AllDirectories)
             .Concat(Directory.GetDirectories(rootPath, "*", SearchOption.AllDirectories));
     }

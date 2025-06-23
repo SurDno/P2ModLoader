@@ -1,6 +1,7 @@
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Saves;
 
@@ -11,6 +12,7 @@ public class SavesTreeViewManager {
     private readonly ContextMenuStrip _contextMenu;
 
     public SavesTreeViewManager(TreeView treeView, ProfileManager manager, SavesTreeViewBuilder treeViewBuilder) {
+        using var perf = PerformanceLogger.Log();
         _treeView = treeView;
         _profileManager = manager;
         _treeViewBuilder = treeViewBuilder;
@@ -20,6 +22,7 @@ public class SavesTreeViewManager {
     }
 
     private void InitializeTreeView() {
+        using var perf = PerformanceLogger.Log();
         _treeView.ShowLines = true;
         _treeView.HideSelection = false;
         _treeView.ContextMenuStrip = _contextMenu;
@@ -31,6 +34,7 @@ public class SavesTreeViewManager {
     }
 
     private ContextMenuStrip CreateContextMenu() {
+        using var perf = PerformanceLogger.Log();
         var menu = new ContextMenuStrip();
         var editMenuItem = new ToolStripMenuItem("Edit Profile Name", null, HandleEditProfile);
         var deleteMenuItem = new ToolStripMenuItem("Delete Selected", null, HandleDeleteSelected);
@@ -39,6 +43,7 @@ public class SavesTreeViewManager {
     }
 
     public void RefreshTreeView() {
+        using var perf = PerformanceLogger.Log();
         try {
             _profileManager.LoadProfiles();
 
@@ -56,6 +61,7 @@ public class SavesTreeViewManager {
     }
 
     private void HandleMouseClick(object? sender, MouseEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (e.Button != MouseButtons.Right) return;
 
         var clickedNode = _treeView.GetNodeAt(e.X, e.Y);
@@ -67,6 +73,7 @@ public class SavesTreeViewManager {
     }
     
     private void HandleMouseDown(object? sender, MouseEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (e.Clicks != 2) return; 
         var node = _treeView.GetNodeAt(e.X, e.Y);
         
@@ -81,6 +88,7 @@ public class SavesTreeViewManager {
     }
 
     private void UpdateContextMenuState(TreeNode node) {
+        using var perf = PerformanceLogger.Log();
         var editMenuItem = (ToolStripMenuItem)_contextMenu.Items[0];
         var deleteMenuItem = (ToolStripMenuItem)_contextMenu.Items[1];
         
@@ -94,10 +102,12 @@ public class SavesTreeViewManager {
     }
 
     private void HandleEditProfile(object? sender, EventArgs e) {
+        using var perf = PerformanceLogger.Log();
         EditProfileNode(_treeView.SelectedNode);
     }
 
     private void HandleDeleteSelected(object? sender, EventArgs e) {
+        using var perf = PerformanceLogger.Log();
         var selectedNode = _treeView.SelectedNode;
         if (selectedNode?.Tag is not NodeData data) return;
 
@@ -105,11 +115,13 @@ public class SavesTreeViewManager {
     }
 
     private void HandleKeyDown(object? sender, KeyEventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (e.KeyCode == Keys.Delete && _treeView.SelectedNode != null)
             HandleDeleteSelected(sender, e);
     }
 
     private void EditProfileNode(TreeNode node) {
+        using var perf = PerformanceLogger.Log();
         if (_treeView.SelectedNode?.Tag is not NodeData { Type: NodeData.NodeType.Profile } nodeData)
             return;
     
@@ -130,9 +142,9 @@ public class SavesTreeViewManager {
             ErrorHandler.Handle("Error renaming profile", ex);
         }
     }
-
-
+    
     private void RenameProfile(TreeNode node, NodeData nodeData, string newName) {
+        using var perf = PerformanceLogger.Log();
         var oldPath = Path.Combine(_profileManager.GetSavesDirectory(), node.Text.Replace(" (current)", ""));
         var newPath = Path.Combine(_profileManager.GetSavesDirectory(), newName);
 
@@ -143,6 +155,7 @@ public class SavesTreeViewManager {
     }
 
     private void DeleteNode(TreeNode node, NodeData data) {
+        using var perf = PerformanceLogger.Log();
         var message = data.Type switch {
             NodeData.NodeType.Profile => "Are you sure you want to delete this profile?",
             NodeData.NodeType.Save => "Are you sure you want to delete this save?",

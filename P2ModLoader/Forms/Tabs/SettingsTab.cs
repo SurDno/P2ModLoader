@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using P2ModLoader.Abstract;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Forms.Tabs;
 
@@ -8,11 +9,13 @@ public class SettingsTab : BaseTab {
     private readonly MainForm? _mainForm;
 
     public SettingsTab(TabPage page, MainForm mainForm) : base(page) {
+        using var perf = PerformanceLogger.Log();
         _mainForm = mainForm;
         InitializeComponents();
     }
     
     protected sealed override void InitializeComponents() {
+        using var perf = PerformanceLogger.Log();
         var logButtonsPanel = new Panel();
         logButtonsPanel.Width = 500;
         logButtonsPanel.Height = 40;

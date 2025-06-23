@@ -1,5 +1,6 @@
 using P2ModLoader.Forms.Tabs;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching;
 
@@ -13,17 +14,20 @@ public class MainForm : Form {
     private Label? _patchStatusLabel;
     
     public MainForm() {
+        using var perf = PerformanceLogger.Log();
         //InitializeComponent();
         InitializeTabs();
         this.Load += MainForm_Load!;
     }
     
     private static async void MainForm_Load(object sender, EventArgs e) {
+        using var perf = PerformanceLogger.Log();
         if (SettingsHolder.CheckForUpdatesOnStartup)
             await AutoUpdater.CheckForUpdatesAsync();
     }
 
     private void InitializeTabs() {
+        using var perf = PerformanceLogger.Log();
         Text = $"P2ModLoader {AutoUpdater.CurrentVersion}";
         Size = SettingsHolder.WindowSize;
         MinimumSize = new Size(600, 700); 
@@ -116,6 +120,7 @@ public class MainForm : Form {
     };
     
     public void UpdateControls() {
+        using var perf = PerformanceLogger.Log();
         var hasConflicts = _modsTab!.HasFileConflicts() || DependencyManager.HasDependencyErrors(ModManager.Mods);
         var shouldDisableButtons = SettingsHolder.InstallPath == null ||
                                    (!SettingsHolder.AllowStartupWithConflicts && hasConflicts) ||

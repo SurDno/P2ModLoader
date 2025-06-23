@@ -3,12 +3,14 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly
 {
     public static class EnumPatcher
     {
         public static bool UpdateEnum(TypeDefinition originalEnum, EnumDeclarationSyntax enumDecl, AssemblyDefinition originalAssembly) {
+            using var perf = PerformanceLogger.Log();
             if (!originalEnum.IsEnum) {
                 ErrorHandler.Handle($"Type {originalEnum.FullName} is not an enum, cannot update it as one.", null);
                 return false;
@@ -43,6 +45,7 @@ namespace P2ModLoader.Patching.Assembly
         }
 
         private static int GetNextEnumValue(TypeDefinition enumType) {
+            using var perf = PerformanceLogger.Log();
             var maxValue = 0;
             var foundAny = false;
             foreach (var field in enumType.Fields.Where(f => f.IsStatic && f.IsLiteral)) {

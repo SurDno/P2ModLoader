@@ -1,11 +1,13 @@
 using System.IO.Compression;
 using System.Xml;
 using System.Xml.Linq;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Xml;
 
 public static class XmlFileManager {
 	public static XDocument? LoadXmlDocument(string path) {
+		using var perf = PerformanceLogger.Log();
 		var settings = new XmlReaderSettings { IgnoreWhitespace = false };
 
 		if (path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)) {
@@ -20,6 +22,7 @@ public static class XmlFileManager {
 	}
 
 	public static void SaveXmlDocument(string path, XDocument doc) {
+		using var perf = PerformanceLogger.Log();
 		var settings = new XmlWriterSettings { NewLineHandling = NewLineHandling.None, Indent = false };
 
 		if (path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase)) {

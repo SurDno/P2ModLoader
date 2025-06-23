@@ -1,5 +1,6 @@
 using P2ModLoader.Abstract;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.Saves;
 
 namespace P2ModLoader.Forms.Tabs;
@@ -13,6 +14,7 @@ public class SavesTab : BaseTab {
 	private readonly string? _profilesPath;
 
 	public SavesTab(TabPage page) : base(page) {
+		using var perf = PerformanceLogger.Log();
 		var appData = InstallationLocator.FindAppData();
 		if (appData != null) {
 			_savesDirectory = Path.Combine(appData, "Saves");
@@ -30,7 +32,8 @@ public class SavesTab : BaseTab {
 	}
 
 	protected sealed override void InitializeComponents() {
-		Logger.LogInfo("Appdata found, initializing saves tree view.");
+		using var perf = PerformanceLogger.Log();
+		Logger.Log(LogLevel.Info, $"Appdata found, initializing saves tree view.");
 		_savesTreeView = new TreeView { Dock = DockStyle.Fill };
 		_profileManager = new ProfileManager(_savesDirectory!, _profilesPath!);
 		var treeViewBuilder = new SavesTreeViewBuilder(_savesDirectory!, _profileManager);
@@ -38,11 +41,12 @@ public class SavesTab : BaseTab {
 
 		Tab.Controls.Add(_savesTreeView);
 		_treeViewManager.RefreshTreeView();
-		Logger.LogInfo("Saves tree view initialized.");
+		Logger.Log(LogLevel.Info, $"Saves tree view initialized.");
 	}
 
 	private void ShowErrorMessage() {
-		Logger.LogInfo("Appdata not found, cannot view save files.");
+		using var perf = PerformanceLogger.Log();
+		Logger.Log(LogLevel.Info, $"Appdata not found, cannot view save files.");
 		_messageLabel = new Label {
 			Text = "AppData for Pathologic 2 not found. " +
 			       "Ensure you launch the game at least once before trying to view saves in Pathologic 2 Mod Loader.",
