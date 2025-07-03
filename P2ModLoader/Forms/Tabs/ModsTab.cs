@@ -175,6 +175,7 @@ public class ModsTab : BaseTab {
 
     private void InitializeModListView() {
         using var perf = PerformanceLogger.Log();
+        ConflictManager.PrecomputeAllConflicts(ModManager.Mods);
         _modListView = new ListView {
             Dock = DockStyle.Fill,
             View = View.Details,
@@ -233,6 +234,7 @@ public class ModsTab : BaseTab {
             SettingsHolder.InstallPath = string.Empty;
             SettingsHolder.InstallPath = tempInstallPath;
             SettingsHolder.IsPatched = tempIsPatched;
+            ConflictManager.PrecomputeAllConflicts(ModManager.Mods);
             SettingsSaver.UnpauseSaving();
         };
 
