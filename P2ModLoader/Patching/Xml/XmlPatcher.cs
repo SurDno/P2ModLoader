@@ -1,215 +1,220 @@
 using System.Xml.Linq;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Xml;
 
 public static class XmlPatcher {
+    private static readonly Dictionary<XElement, Dictionary<string, XElement>> IdBasedLookupCache = new();
+    private static readonly Dictionary<XElement, List<XElement>> ChildrenByNameCache = new();
+    
     public static bool PatchXml(string sourcePath, string modPath, string targetPath) {
-        XPathCalculator.ClearCache();
+        using var perf = PerformanceLogger.Log();
+        ClearAllCaches();
+        
         try {
+            Logger.Log(LogLevel.Info, $"Starting XML patch for {Path.GetFileName(targetPath)}");
+            
             var baseDoc = XmlFileManager.LoadXmlDocument(sourcePath);
             var modDoc = XmlFileManager.LoadXmlDocument(modPath);
             var targetDoc = XmlFileManager.LoadXmlDocument(targetPath);
 
             if (baseDoc == null || modDoc == null || targetDoc == null) {
-                Logger.LogInfo($"Failed to load XML documents for {Path.GetFileName(targetPath)}");
+                Logger.Log(LogLevel.Info, $"Failed to load XML documents for {Path.GetFileName(targetPath)}");
                 return false;
             }
-
-            Logger.LogInfo($"Merging XML nodes for {Path.GetFileName(targetPath)}");
+            
+            Logger.Log(LogLevel.Info, $"Merging XML nodes for {Path.GetFileName(targetPath)}");
+            Logger.Log(LogLevel.Info, $"Building optimized lookup caches...");
+            BuildOptimizedCaches(targetDoc.Root!);
+            BuildOptimizedCaches(modDoc.Root!);
+            BuildOptimizedCaches(baseDoc.Root!);
+            Logger.Log(LogLevel.Info, $"Starting merge process...");
             MergeXmlNodes(targetDoc.Root!, modDoc.Root!, baseDoc.Root!);
-
-            Logger.LogInfo($"Saving patched XML: {Path.GetFileName(targetPath)}");
+            Logger.Log(LogLevel.Info, $"Saving patched XML: {Path.GetFileName(targetPath)}");
             XmlFileManager.SaveXmlDocument(targetPath, targetDoc);
-
-            Logger.LogInfo($"Successfully patched XML: {Path.GetFileName(targetPath)}");
+            Logger.Log(LogLevel.Info, $"Successfully patched XML: {Path.GetFileName(targetPath)}.");
             return true;
         } catch (Exception ex) {
-            ErrorHandler.Handle($"Failed to patch XML file {Path.GetFileName(targetPath)}", ex);
+            ErrorHandler.Handle($"Failed to patch XML file {Path.GetFileName(targetPath)}.", ex);
             return false;
+        } finally {
+            ClearAllCaches();
+        }
+    }
+    
+    private static void ClearAllCaches() {
+        using var perf = PerformanceLogger.Log();
+        XPathCalculator.ClearCache();
+        IdBasedLookupCache.Clear();
+        ChildrenByNameCache.Clear();
+    }
+    
+    private static void BuildOptimizedCaches(XElement root) {
+        using var perf = PerformanceLogger.Log();
+        
+        foreach (var element in root.DescendantsAndSelf()) {
+            var idLookup = new Dictionary<string, XElement>();
+            foreach (var child in element.Elements()) {
+                var idAttr = child.Attribute("id")?.Value;
+                var idElement = child.Element("Id")?.Value;
+                var identifier = idAttr ?? idElement;
+                
+                if (!string.IsNullOrEmpty(identifier)) 
+                    idLookup[identifier] = child;
+            }
+            if (idLookup.Count > 0) 
+                IdBasedLookupCache[element] = idLookup;
+            
+            var byName = element.Elements().GroupBy(e => e.Name.LocalName).ToDictionary(g => g.Key, g => g.ToList());
+            
+            if (byName.Count > 0) 
+                ChildrenByNameCache[element] = element.Elements().ToList();
         }
     }
 
     private static void MergeXmlNodes(XElement target, XElement src, XElement backup) {
-        var xpath = XPathCalculator.GetXPathWithIndex(target);
-
+        using var perf = PerformanceLogger.Log();
+        if (XNode.DeepEquals(src, backup)) return;
+        
         if (!src.HasElements && src.Value != backup.Value) {
-            Logger.LogInfo($"Changing content at {xpath} from '{target.Value}' to '{src.Value}'");
+            if (target.Value == src.Value) return;
+            var xpath = XPathCalculator.GetXPathWithIndex(target);
+            Logger.Log(LogLevel.Info, $"Changing content at {xpath} from '{target.Value}' to '{src.Value}'");
             target.Value = src.Value;
             return;
         }
 
-        if (src.Name.LocalName == "Object" && target.Name.LocalName == "Object" && backup.Name.LocalName == "Object") {
-            var targetId = target.Element("Id")?.Value;
-            var sourceId = src.Element("Id")?.Value;
-            var backupId = backup.Element("Id")?.Value;
-            
-            if (targetId == sourceId && targetId == backupId) {
-                foreach (var sourceChild in src.Elements()) {
-                    var targetChild = target.Element(sourceChild.Name);
-                    var backupChild = backup.Element(sourceChild.Name);
-                    
-                    if (targetChild != null && backupChild != null) {
-                        MergeXmlNodes(targetChild, sourceChild, backupChild);
-                    } else if (targetChild == null && backupChild == null) {
-                        target.Add(new XElement(sourceChild));
-                    }
-                }
-                foreach (var attr in src.Attributes()) {
-                    target.SetAttributeValue(attr.Name, attr.Value);
-                }
-                return;
-            }
+        var srcElements = src.Elements().ToList();
+
+        if (srcElements.Count > 1000) {
+            ProcessChildrenInBatches(target, backup, srcElements);
+            return;
         }
         
-        if (src.Name.LocalName == "Object" && target.Name.LocalName != "Object") {
-            var targetId = target.Element("Id")?.Value;
-            var sourceId = src.Element("Id")?.Value;
-            var backupId = backup.Element("Id")?.Value;
+        ProcessChildrenOptimized(target, backup, srcElements);
+        ProcessAttributesBatch(target, src, backup);
+    }
+    
+    private static void ProcessChildrenInBatches(XElement target, XElement backup, List<XElement> srcElements) {
+        using var perf = PerformanceLogger.Log();
+        Logger.Log(LogLevel.Info, $"Processing {srcElements.Count} children in batches");
+
+        var elementsWithIds = new List<XElement>();
+        var elementsWithoutIds = new List<XElement>();
+        
+        foreach (var srcChild in srcElements) {
+            var idAttr = srcChild.Attribute("id")?.Value;
+            var idElement = srcChild.Element("Id")?.Value;
             
-            MergeObjectsContainer(target, src, backup);
-            return;
+            if (!string.IsNullOrEmpty(idAttr) || !string.IsNullOrEmpty(idElement)) 
+                elementsWithIds.Add(srcChild);
+            else 
+                elementsWithoutIds.Add(srcChild);
         }
-
-        var hasIdentifiers = src.Elements().All(e => e.Attribute("id") != null || e.Element("Id") != null);
-        if (!hasIdentifiers && src.Elements().Select(e => e.Name)
-                .Any(n => src.Elements(n).Count() - backup.Elements(n).Count() != 0)) {
-            var addedNodes = GetNodeDifference(src.Elements(), backup.Elements());
-            var removedNodes = GetNodeDifference(backup.Elements(), src.Elements());
-
-            if (addedNodes.Count != 0)
-                Logger.LogInfo($"Added nodes at {xpath}: {string.Join("", addedNodes)}");
-            if (removedNodes.Count != 0)
-                Logger.LogInfo($"Removed nodes at {xpath}: {string.Join("", removedNodes)}");
-
-            target.ReplaceNodes(new XElement(src).Nodes());
-            return;
+        
+        Logger.Log(LogLevel.Info, $"Found {elementsWithIds.Count} elements with IDs, " +
+                                  $"{elementsWithoutIds.Count} without IDs");
+        
+        if (elementsWithIds.Count > 0) 
+            ProcessElementsWithIds(target, backup, elementsWithIds);
+        
+        const int batchSize = 1000;
+        for (var i = 0; i < elementsWithoutIds.Count; i += batchSize) {
+            var batch = elementsWithoutIds.Skip(i).Take(batchSize).ToList();
+            ProcessElementsBatch(target, backup, batch);
         }
+    }
 
-        foreach (var sourceChild in src.Elements()) {
-            var targetChild = FindMatchingNode(target, sourceChild);
-            var baseChild = FindMatchingNode(backup, sourceChild);
+    private static void ProcessElementsWithIds(XElement target, XElement backup, List<XElement> elementsWithIds) {
+        using var perf = PerformanceLogger.Log();
+        var targetIdLookup = IdBasedLookupCache.GetValueOrDefault(target, new Dictionary<string, XElement>());
+        var backupIdLookup = IdBasedLookupCache.GetValueOrDefault(backup, new Dictionary<string, XElement>());
 
-            if (targetChild != null && baseChild != null) {
-                MergeXmlNodes(targetChild, sourceChild, baseChild);
-            } else if (targetChild == null && baseChild == null) {
-                Logger.LogInfo($"Adding new node at {xpath}/{sourceChild.Name.LocalName}");
-                target.Add(new XElement(sourceChild));
+        foreach (var srcChild in elementsWithIds) {
+            var idAttr = srcChild.Attribute("id")?.Value;
+            var idElement = srcChild.Element("Id")?.Value;
+            var identifier = idAttr ?? idElement;
+
+            if (string.IsNullOrEmpty(identifier)) continue;
+
+            var targetChild = targetIdLookup.GetValueOrDefault(identifier);
+            var backupChild = backupIdLookup.GetValueOrDefault(identifier);
+
+            if (targetChild != null && backupChild != null) {
+                if (!XNode.DeepEquals(srcChild, backupChild))
+                    MergeXmlNodes(targetChild, srcChild, backupChild);
+            } else if (targetChild == null && backupChild == null)
+                target.Add(new XElement(srcChild));
+        }
+    }
+
+    private static void ProcessElementsBatch(XElement target, XElement backup, List<XElement> batch) {
+        using var perf = PerformanceLogger.Log();
+        var targetChildren = ChildrenByNameCache.GetValueOrDefault(target, target.Elements().ToList());
+        var backupChildren = ChildrenByNameCache.GetValueOrDefault(backup, backup.Elements().ToList());
+        
+        foreach (var srcChild in batch) {
+            var targetChild = FindMatchingNodeFast(targetChildren, srcChild);
+            var backupChild = FindMatchingNodeFast(backupChildren, srcChild);
+            
+            if (targetChild != null && backupChild != null) {
+                if (!XNode.DeepEquals(srcChild, backupChild))
+                    MergeXmlNodes(targetChild, srcChild, backupChild);
+            } else if (targetChild == null && backupChild == null) {
+                target.Add(new XElement(srcChild));
             }
         }
+    }
+    
+    private static void ProcessChildrenOptimized(XElement target, XElement backup, List<XElement> srcElements) {
+        using var perf = PerformanceLogger.Log();
+        foreach (var sourceChild in srcElements) {
+            var targetChild = FindMatchingNodeUltraFast(target, sourceChild);
+            var baseChild = FindMatchingNodeUltraFast(backup, sourceChild);
 
-        foreach (var attr in src.Attributes()) {
-            var baseAttr = backup.Attribute(attr.Name);
-            if (baseAttr != null && baseAttr.Value == attr.Value) continue;
-            Logger.LogInfo($"Updating attribute {attr.Name} at {xpath} to '{attr.Value}'");
+            if (targetChild != null && baseChild != null) {
+                if (!XNode.DeepEquals(sourceChild, baseChild))
+                    MergeXmlNodes(targetChild, sourceChild, baseChild);
+            } else if (targetChild == null && baseChild == null) 
+                target.Add(new XElement(sourceChild));
+        }
+    }
+    
+    private static void ProcessAttributesBatch(XElement target, XElement src, XElement backup) {
+        using var perf = PerformanceLogger.Log();
+        var attributesToUpdate = (from attr in src.Attributes() let baseAttr = backup.Attribute(attr.Name)
+            where baseAttr == null || baseAttr.Value != attr.Value select attr).ToList();
+
+        if (attributesToUpdate.Count <= 0) return;
+        
+        foreach (var attr in attributesToUpdate) {
+            Logger.Log(LogLevel.Info, $"Updating attribute {attr.Name} at " +
+                                      $"{XPathCalculator.GetXPathWithIndex(target)} to '{attr.Value}'");
             target.SetAttributeValue(attr.Name, attr.Value);
         }
     }
-
-    private static void MergeObjectsContainer(XElement target, XElement src, XElement backup) {
-        var srcObjects = src.Elements("Object").ToList();
-        var srcIds = srcObjects.Select(o => o.Element("Id")?.Value).Where(id => !string.IsNullOrEmpty(id)).ToList();
-        var targetObjects = target.Elements("Object").ToList();
-        
-        var srcIdToIndex = new Dictionary<string, int>();
-        for (int i = 0; i < srcObjects.Count; i++) {
-            var id = srcObjects[i].Element("Id")?.Value;
-            if (!string.IsNullOrEmpty(id)) srcIdToIndex[id] = i;
-        }
-        
-        var existingIds = new HashSet<string>();
-        foreach (var obj in targetObjects) {
-            var id = obj.Element("Id")?.Value;
-            if (!string.IsNullOrEmpty(id)) existingIds.Add(id);
-        }
-        
-        foreach (var srcObj in srcObjects) {
-            var id = srcObj.Element("Id")?.Value;
-            if (string.IsNullOrEmpty(id)) continue;
-            
-            if (!existingIds.Contains(id)) {
-                existingIds.Add(id);
-                Logger.LogInfo($"Adding new Object with Id {id}");
-                
-                int insertIndex = -1;
-                
-                var srcIndex = srcIdToIndex[id];
-                
-                var prevObj = srcIndex > 0 ? srcObjects[srcIndex - 1] : null;
-                var nextObj = srcIndex < srcObjects.Count - 1 ? srcObjects[srcIndex + 1] : null;
-                
-                var prevId = prevObj?.Element("Id")?.Value;
-                var nextId = nextObj?.Element("Id")?.Value;
-                
-                var prevTargetIndex = -1;
-                var nextTargetIndex = -1;
-                
-                if (!string.IsNullOrEmpty(prevId)) {
-                    for (int i = 0; i < targetObjects.Count; i++) {
-                        if (targetObjects[i].Element("Id")?.Value == prevId) {
-                            prevTargetIndex = i;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!string.IsNullOrEmpty(nextId)) {
-                    for (int i = 0; i < targetObjects.Count; i++) {
-                        if (targetObjects[i].Element("Id")?.Value == nextId) {
-                            nextTargetIndex = i;
-                            break;
-                        }
-                    }
-                }
-                
-                if (prevTargetIndex >= 0) {
-                    insertIndex = prevTargetIndex + 1;
-                } else if (nextTargetIndex >= 0) {
-                    insertIndex = nextTargetIndex;
-                }
-                
-                var newElement = new XElement(srcObj);
-                
-                if (insertIndex >= 0 && insertIndex < targetObjects.Count) {
-                    targetObjects[insertIndex].AddBeforeSelf(newElement);
-                    targetObjects.Insert(insertIndex, newElement);
-                } else {
-                    target.Add(newElement);
-                    targetObjects.Add(newElement);
-                }
-            }
-        }
-        
-        foreach (var targetObj in targetObjects) {
-            var id = targetObj.Element("Id")?.Value;
-            if (string.IsNullOrEmpty(id)) continue;
-            
-            var srcObj = srcObjects.FirstOrDefault(o => o.Element("Id")?.Value == id);
-            var backupObj = backup.Elements("Object").FirstOrDefault(o => o.Element("Id")?.Value == id);
-            
-            if (srcObj != null && backupObj != null) {
-                MergeXmlNodes(targetObj, srcObj, backupObj);
-            }
-        }
-    }
-
-    private static List<string> GetNodeDifference(IEnumerable<XElement> first, IEnumerable<XElement> second) =>
-        FormatNodes(first).Except(FormatNodes(second)).ToList();
-
-    private static IEnumerable<string> FormatNodes(IEnumerable<XElement> nodes) =>
-        nodes.Select(n => n.ToString(SaveOptions.DisableFormatting));
     
-    private static XElement? FindMatchingNode(XElement parent, XElement nodeToFind) {
-        var idAttr = nodeToFind.Attribute("id");
-        if (idAttr != null) 
-            return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Attribute("id")?.Value == idAttr.Value);
-
-        if (nodeToFind.Element("Id") != null) {
-            var idValue = nodeToFind.Element("Id")!.Value;
-            return parent.Elements(nodeToFind.Name).FirstOrDefault(e => e.Element("Id")?.Value == idValue);
-        }
-
+    private static XElement? FindMatchingNodeUltraFast(XElement parent, XElement nodeToFind) {
+        using var perf = PerformanceLogger.Log();
+        var idAttr = nodeToFind.Attribute("id")?.Value;
+        if (!string.IsNullOrEmpty(idAttr) && IdBasedLookupCache.TryGetValue(parent, out var idLookup1))
+            return idLookup1.GetValueOrDefault(idAttr);
+        var idElement = nodeToFind.Element("Id")?.Value;
+        if (!string.IsNullOrEmpty(idElement) && IdBasedLookupCache.TryGetValue(parent, out var idLookup2))
+            return idLookup2.GetValueOrDefault(idElement);
+        
+        if (ChildrenByNameCache.TryGetValue(parent, out var childrenList)) 
+            return FindMatchingNodeFast(childrenList, nodeToFind);
+        
         var sameNameElements = parent.Elements(nodeToFind.Name).ToList();
+        var indexInSameNameSiblings = nodeToFind.ElementsBeforeSelf(nodeToFind.Name).Count();
+        return indexInSameNameSiblings < sameNameElements.Count ? sameNameElements[indexInSameNameSiblings] : null;
+    }
+    
+    private static XElement? FindMatchingNodeFast(List<XElement> childrenList, XElement nodeToFind) {
+        using var perf = PerformanceLogger.Log();
+        var sameNameElements = childrenList.Where(e => e.Name == nodeToFind.Name).ToList();
         var indexInSameNameSiblings = nodeToFind.ElementsBeforeSelf(nodeToFind.Name).Count();
         return indexInSameNameSiblings < sameNameElements.Count ? sameNameElements[indexInSameNameSiblings] : null;
     }
