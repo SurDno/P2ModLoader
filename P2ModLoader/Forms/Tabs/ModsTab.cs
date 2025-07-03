@@ -15,19 +15,18 @@ public class ModsTab : BaseTab {
     private TableLayoutPanel? _messageContainer;
     private Label? _messageLabel;
     private Button? _initializeButton;
-    private bool _isRefreshing;
+    private bool _isRefreshingUI;
+    private bool _suppressEvents;
 
     public event Action? ModsChanged;
 
     public ModsTab(TabPage page) : base(page) {
         using var perf = PerformanceLogger.Log();
-        _isRefreshing = false;
 
         InitializeComponents();
         InitializeEvents();
 
         ModManager.ModsLoaded += OnModsLoaded;
-
         SettingsHolder.InstallPathChanged += OnSettingChanged;
         SettingsHolder.StartupWithConflictsChanged += OnSettingChanged;
 
@@ -284,23 +283,24 @@ public class ModsTab : BaseTab {
 
     private void SetAllModsChecked(bool value) {
         using var perf = PerformanceLogger.Log();
-        if (_modListView == null || _isRefreshing) return;
+        if (_modListView == null || _isRefreshingUI) return;
 
         try {
-            _isRefreshing = true;
+            _isRefreshingUI = true;
+            _suppressEvents = true;
 
             foreach (ListViewItem item in _modListView.Items) {
                 if (item.Tag is not Mod mod) continue;
-
-                item.Checked = value;
                 mod.IsEnabled = value;
-                RefreshItem(item);
+                item.Checked = value;
             }
 
             SettingsHolder.UpdateModState(ModManager.Mods);
             ModsChanged?.Invoke();
+            RefreshModList();
         } finally {
-            _isRefreshing = false;
+            _isRefreshingUI = false;
+            _suppressEvents = false;
         }
     }
     
@@ -337,12 +337,11 @@ public class ModsTab : BaseTab {
 
         return item;
     }
-
+    
     private void ModListView_ItemChecked(object? sender, ItemCheckedEventArgs e) {
         using var perf = PerformanceLogger.Log();
-        if (_isRefreshing || e.Item.Tag is not Mod mod || _modListView == null) return;
+        if (_suppressEvents || e.Item.Tag is not Mod mod || _modListView == null) return;
 
-        // Very dirty workaround to prevent isPatched being set to false during init.
         if (Environment.StackTrace.Contains("CreateControl"))
             return;
 
@@ -354,48 +353,37 @@ public class ModsTab : BaseTab {
 
     private void RefreshItem(ListViewItem item) {
         using var perf = PerformanceLogger.Log();
-        if (_isRefreshing || _modListView == null || item.Tag is not Mod mod) return;
+        if (_modListView == null || item.Tag is not Mod mod) return;
 
-        try {
-            _isRefreshing = true;
+        var conflict = ConflictManager.GetConflictDisplay(mod, ModManager.Mods);
+        var dependency = DependencyManager.ValidateDependencies(mod, ModManager.Mods);
 
-            var conflict = ConflictManager.GetConflictDisplay(mod, ModManager.Mods);
-            var dependency = DependencyManager.ValidateDependencies(mod, ModManager.Mods);
+        item.BackColor = dependency.HasErrors ? dependency.DisplayColor : conflict.BackgroundColor;
+        mod.DependencyError = dependency.HasErrors ? dependency.ErrorMessage : string.Empty;
 
-            item.BackColor = dependency.HasErrors ? dependency.DisplayColor : conflict.BackgroundColor;
-            mod.DependencyError = dependency.HasErrors ? dependency.ErrorMessage : string.Empty;
+        foreach (ListViewItem otherItem in _modListView.Items) {
+            if (otherItem == null || otherItem == item || otherItem.Tag is not Mod otherMod) continue;
 
-            foreach (ListViewItem otherItem in _modListView.Items) {
-                if (otherItem == null || otherItem == item || otherItem.Tag is not Mod otherMod) continue;
+            var conflict2 = ConflictManager.GetConflictDisplay(otherMod, ModManager.Mods);
+            var dependency2 = DependencyManager.ValidateDependencies(otherMod, ModManager.Mods);
 
-                var conflict2 = ConflictManager.GetConflictDisplay(otherMod, ModManager.Mods);
-                var dependency2 = DependencyManager.ValidateDependencies(otherMod, ModManager.Mods);
-
-                otherItem.BackColor = dependency2.HasErrors ? dependency2.DisplayColor : conflict2.BackgroundColor;
-                otherMod.DependencyError = dependency2.HasErrors ? dependency2.ErrorMessage : string.Empty;
-            }
-        } finally {
-            _isRefreshing = false;
+            otherItem.BackColor = dependency2.HasErrors ? dependency2.DisplayColor : conflict2.BackgroundColor;
+            otherMod.DependencyError = dependency2.HasErrors ? dependency2.ErrorMessage : string.Empty;
         }
     }
 
     private void RefreshModList() {
         using var perf = PerformanceLogger.Log();
-        if (_isRefreshing || _modListView == null) return;
+        if (_modListView == null) return;
 
-        try {
-            _isRefreshing = true;
-            var currentItems = ModManager.Mods.Select(CreateListViewItem).ToArray();
+        var currentItems = ModManager.Mods.Select(CreateListViewItem).ToArray();
 
-            _modListView!.BeginUpdate();
-            _modListView.Items.Clear();
-            _modListView.Items.AddRange(currentItems);
-            _modListView.EndUpdate();
-        } finally {
-            _isRefreshing = false;
-        }
+        _modListView.BeginUpdate();
+        _modListView.Items.Clear();
+        _modListView.Items.AddRange(currentItems);
+        _modListView.EndUpdate();
     }
-
+    
     private void InitializeEvents() {
         using var perf = PerformanceLogger.Log();
         _modListView!.ItemDrag += ModListView_ItemDrag;
