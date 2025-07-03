@@ -101,6 +101,34 @@ public class SettingsTab : BaseTab {
             SettingsHolder.CheckForUpdatesOnStartup = checkForUpdatesCheckBox.Checked;
         };
 
+        
+        var logLevelLabel = new Label();
+        logLevelLabel.Text = "Log Level:";
+        logLevelLabel.Location = new Point(20, 205);
+        logLevelLabel.AutoSize = true;
+
+        var logLevelComboBox = new ComboBox();
+        logLevelComboBox.Location = new Point(20, 230);
+        logLevelComboBox.Width = 200;
+        logLevelComboBox.Height = 28;
+        logLevelComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+
+        var logLevels = Enum.GetValues<LogLevel>().Cast<LogLevel>().ToArray();
+        foreach (var level in logLevels) {
+            logLevelComboBox.Items.Add(new { Text = level.ToString(), Value = level });
+        }
+        logLevelComboBox.DisplayMember = "Text";
+        logLevelComboBox.ValueMember = "Value";
+
+        logLevelComboBox.SelectedIndex = Array.IndexOf(logLevels, SettingsHolder.LogLevel);
+
+        logLevelComboBox.SelectedIndexChanged += (_, _) => {
+            if (logLevelComboBox.SelectedItem != null) {
+                var selectedItem = (dynamic)logLevelComboBox.SelectedItem;
+                SettingsHolder.LogLevel = (LogLevel)selectedItem.Value;
+            }
+        };
+
         logButtonsPanel.Location = new Point(Tab.Width - logButtonsPanel.Width - 20, Tab.Height - logButtonsPanel.Height - 20);
         
         Tab.Controls.AddRange([
@@ -111,6 +139,8 @@ public class SettingsTab : BaseTab {
             allowConflictsCheckBox,
             checkForUpdatesButton,
             checkForUpdatesCheckBox,
+            logLevelLabel,      
+            logLevelComboBox,    
             logButtonsPanel
         ]);
     }

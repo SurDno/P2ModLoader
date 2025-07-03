@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using P2ModLoader.Helper;
 
 namespace P2ModLoader.Logging;
 
@@ -8,7 +9,7 @@ public sealed class PerformanceLogger : IDisposable {
 	private readonly Stopwatch? _stopwatch;
 
 	private PerformanceLogger(string? context) {
-		if (Logger.MinimumLevel < LogLevel.Performance) return;
+		if (SettingsHolder.LogLevel < LogLevel.Performance) return;
 		
 		_context = context;
 		_stopwatch = Stopwatch.StartNew();
@@ -23,7 +24,7 @@ public sealed class PerformanceLogger : IDisposable {
 		var elapsed = _stopwatch.ElapsedMilliseconds;
         
 		var perfLevel = elapsed switch {
-			< 1 => LogLevel.Trace,
+			< 5 => LogLevel.Trace,
 			< 1000 => LogLevel.Performance,
 			< 5000 => LogLevel.Warning,
 			_ => LogLevel.Error

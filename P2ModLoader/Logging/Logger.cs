@@ -8,8 +8,6 @@ public static class Logger {
     private static readonly object LockObject = new();
     private static readonly List<string> BufferedLogs = [];
     private static string? _lastInstallLogPath;
-    
-    public static LogLevel MinimumLevel { get; set; } = LogLevel.Performance;
 
     static Logger() {
         var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
@@ -55,14 +53,14 @@ public static class Logger {
     }
 
     public static void Log(LogLevel lvl, [InterpolatedStringHandlerArgument("lvl")] LogInterpolatedStringHandler handler) {
-        if (lvl > MinimumLevel || MinimumLevel == LogLevel.None)
+        if (lvl > SettingsHolder.LogLevel || SettingsHolder.LogLevel == LogLevel.None)
             return;
 
         WriteToLogs($"{lvl.ToString().ToUpper()}: {handler.ToString()}");
     }
 
     public static void LogLineBreak(LogLevel lvl) {
-        if (lvl > MinimumLevel || MinimumLevel == LogLevel.None) return;
+        if (lvl > SettingsHolder.LogLevel || SettingsHolder.LogLevel == LogLevel.None) return;
         WriteToLogs(string.Empty, timestamped: false);
     }
 }

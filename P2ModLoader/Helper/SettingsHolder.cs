@@ -10,13 +10,15 @@ public static class SettingsHolder {
 	private static bool _checkForUpdatesOnStartup = true;
 	private static List<SavedModState> _lastKnownModState = [];
 	private static Size _windowSize = new(600, 800);
+	private static LogLevel _logLevel = LogLevel.Info;
 	
 	public static event Action? InstallPathChanged,
 		StartupWithConflictsChanged,
 		PatchStatusChanged,
 		ModStateChanged,
 		CheckForUpdatesOnStartupChanged,
-		WindowSizeChanged;
+		WindowSizeChanged,
+		LogLevelChanged;
 
 	public static string? InstallPath {
 		get => _installPath;
@@ -92,6 +94,17 @@ public static class SettingsHolder {
 			_windowSize = value;
 			WindowSizeChanged?.Invoke();
 			Logger.Log(LogLevel.Info, $"Setting {nameof(WindowSize)} changed to: {value}");
+		}
+	}
+	
+	public static LogLevel LogLevel {
+		get => _logLevel;
+		set {
+			using var perf = PerformanceLogger.Log();
+			if (_logLevel == value) return;
+			_logLevel = value;
+			LogLevelChanged?.Invoke();
+			Logger.Log(LogLevel.Info, $"Setting {nameof(LogLevel)} changed to: {value}");
 		}
 	}
 }

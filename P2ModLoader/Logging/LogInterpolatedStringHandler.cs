@@ -1,14 +1,15 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Text;
-using P2ModLoader.Logging;
+using P2ModLoader.Helper;
 
-namespace P2ModLoader.Helper {
+namespace P2ModLoader.Logging {
 	[InterpolatedStringHandler]
 	public readonly ref struct LogInterpolatedStringHandler {
 		private readonly StringBuilder? _builder;
 
 		public LogInterpolatedStringHandler(int literalLength, int formattedCount, LogLevel level, out bool shouldAppend) {
-			if (level <= Logger.MinimumLevel && Logger.MinimumLevel != LogLevel.None) {
+			if (level <= SettingsHolder.LogLevel && SettingsHolder.LogLevel != LogLevel.None) {
 				_builder = new StringBuilder(literalLength);
 				shouldAppend = true;
 			} else {
