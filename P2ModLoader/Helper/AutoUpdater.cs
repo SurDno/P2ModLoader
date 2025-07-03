@@ -82,8 +82,12 @@ public static partial class AutoUpdater {
 
     private static async Task<List<GitHubRelease>?> GetAllReleasesAsync() {
         using var perf = PerformanceLogger.Log();
-        var response = await Client.GetStringAsync($"https://api.github.com/repos/{OWNER}/{REPO}/releases");
-        return JsonSerializer.Deserialize<List<GitHubRelease>>(response, JsonOptions) ?? [];
+        try {
+            var response = await Client.GetStringAsync($"https://api.github.com/repos/{OWNER}/{REPO}/releases");
+            return JsonSerializer.Deserialize<List<GitHubRelease>>(response, JsonOptions) ?? [];
+        } catch {
+            return null;
+        }
     }
 
     private static string GetCumulativeReleaseNotes(List<GitHubRelease> releases) {
