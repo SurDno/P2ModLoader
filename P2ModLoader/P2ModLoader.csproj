@@ -9,6 +9,9 @@
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
         <PublishSingleFile>true</PublishSingleFile>
+        <ProbeForExtensions>false</ProbeForExtensions>        
+        <DebugType Condition="'$(Configuration)' == 'Release'">None</DebugType>
+        <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
     </PropertyGroup>
 
     <ItemGroup>
