@@ -56,9 +56,9 @@ public class ModInfo {
 					info.MinLoaderVersion = value;
 					break;
 				default:
-					ErrorHandler.Handle($"Mod located at {Path.GetFileName(filePath)} has unsupported setting in its " +
-					                    $"ModInfo.ltx: {key}. Either there is a mistake in the file, or an update " +
-					                    $"to the mod loader is required to properly parse that.", null);
+					ErrorHandler.Handle($"Mod located at {Path.GetDirectoryName(filePath)} has unsupported setting in" +
+					                    $" its ModInfo.ltx: {key}. Either there is a mistake in the file, or an" +
+					                    $" update to the mod loader is required to properly parse that", null);
 					break;
 			}
 		}
