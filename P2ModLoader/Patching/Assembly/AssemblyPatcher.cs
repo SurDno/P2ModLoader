@@ -44,7 +44,7 @@ public static class AssemblyPatcher {
                 return false;
             }
 
-            if (classDeclarations.Concat<MemberDeclarationSyntax>(enumDeclarations).Count() > 1) {
+            if (classDeclarations.Concat<MemberDeclarationSyntax>(enumDeclarations).Concat(interfaceDeclarations).Count() > 1) {
                 ErrorHandler.Handle($"The file {updatedSourcePath} contains multiple member definitions.", null);
                 return false;
             }
