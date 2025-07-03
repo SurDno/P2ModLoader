@@ -5,11 +5,12 @@ using P2ModLoader.Helper;
 namespace P2ModLoader.Logging;
 
 public sealed class PerformanceLogger : IDisposable {
+	private static readonly PerformanceLogger DummyLogger = new(null);
 	private readonly string? _context;
 	private readonly Stopwatch? _stopwatch;
 
 	private PerformanceLogger(string? context) {
-		if (SettingsHolder.LogLevel < LogLevel.Performance) return;
+		if (context == null) return;
 		
 		_context = context;
 		_stopwatch = Stopwatch.StartNew();
@@ -33,6 +34,9 @@ public sealed class PerformanceLogger : IDisposable {
 		Logger.Log(perfLevel, $"[{_context}] Completed in {elapsed}ms");
 	}
     
-	public static PerformanceLogger Log([CallerMemberName] string method = "", [CallerFilePath] string path = "") =>
-		new ($"{Path.GetFileNameWithoutExtension(path)}.{method}");
+    
+	public static PerformanceLogger Log([CallerMemberName] string method = "", [CallerFilePath] string path = "") {
+		return SettingsHolder.LogLevel < LogLevel.Performance ? DummyLogger
+					: new($"{Path.GetFileNameWithoutExtension(path)}.{method}");
+	}
 }
