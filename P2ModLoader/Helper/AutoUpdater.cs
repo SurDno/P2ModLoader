@@ -11,6 +11,7 @@ namespace P2ModLoader.Helper;
 
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
 [SuppressMessage("ReSharper", "CollectionNeverUpdated.Global")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public class GitHubRelease {
     [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
     [JsonPropertyName("assets")] public List<GitHubAsset> Assets { get; set; } = [];
@@ -18,6 +19,7 @@ public class GitHubRelease {
 }
 
 [SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
+[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
 public class GitHubAsset {
     [JsonPropertyName("browser_download_url")]
     public string BrowserDownloadUrl { get; set; } = string.Empty;
