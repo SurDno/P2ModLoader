@@ -1,74 +1,44 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Reflection;
-using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 
-namespace P2ModLoader.Helper;
-
-[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
-[SuppressMessage("ReSharper", "CollectionNeverUpdated.Global")]
-[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-public class GitHubRelease {
-    [JsonPropertyName("tag_name")] public string TagName { get; set; } = string.Empty;
-    [JsonPropertyName("assets")] public List<GitHubAsset> Assets { get; set; } = [];
-    [JsonPropertyName("body")] public string Body { get; set; } = string.Empty;
-}
-
-[SuppressMessage("ReSharper", "ClassNeverInstantiated.Global")]
-[SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
-public class GitHubAsset {
-    [JsonPropertyName("browser_download_url")]
-    public string BrowserDownloadUrl { get; set; } = string.Empty;
-}
+namespace P2ModLoader.Update;
 
 public static partial class AutoUpdater {
     private const string OWNER = "SurDno";
     private const string REPO = "P2ModLoader";
-
-    public static readonly string CurrentVersion;
-    private static readonly HttpClient Client;
+    
     private static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
     private static readonly string UpdateDirectory = Path.Combine(BaseDirectory, "Updates");
 
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    static AutoUpdater() {
-        using var perf = PerformanceLogger.Log();
-        var versionInfo = Assembly.GetExecutingAssembly().GetName().Version!;
-        CurrentVersion = $"{versionInfo.Major}.{versionInfo.Minor}.{versionInfo.Build}";
-
-        Client = new HttpClient();
-        Client.DefaultRequestHeaders.Add("User-Agent", "Auto-Updater");
-    }
     
     public static async Task CheckForUpdatesAsync(bool showNoUpdatesDialog = false) {
         using var perf = PerformanceLogger.Log();
         Logger.Log(LogLevel.Info, $"Initiating update check...");
         try {
-            var releases = await GetAllReleasesAsync();
+            var releases = await GitHubDownloader.GetAllReleasesAsync(OWNER, REPO);
             if (releases == null || releases.Count == 0 || releases[0].Assets.Count == 0) {
-                ErrorHandler.Handle("No available versions found. Check your internet connection.", null);
+                ErrorHandler.Handle("No available versions found. Check your internet connection", null);
                 return;
             }
-
+            
             var latestRelease = releases[0];
             var newVersion = latestRelease.TagName.TrimStart('v');
-            Logger.Log(LogLevel.Info, $"Latest version is: {newVersion}, current version is: {CurrentVersion}");
+            Logger.Log(LogLevel.Info, $"Latest version is: {newVersion}, current version is: {VersionComparison.CurrentLoaderVersion}");
 
-            if (!IsNewer(newVersion)) {
+            if (!VersionComparison.IsLoaderNewer(newVersion)) {
                 if (showNoUpdatesDialog)
                     MessageBox.Show("No new versions found.", "No updates", MessageBoxButtons.OK);
                 return;
             }
 
             var message = $"A new update is available ({newVersion}).\n" +
-                          $"Changes from current version ({CurrentVersion}):\n\n" +
+                          $"Changes from current version ({VersionComparison.CurrentLoaderVersion}):\n\n" +
                           
-                          $"{GetCumulativeReleaseNotes(releases)}\n\n" +
+                          $"{PatchnoteBuilder.GetCumulativeReleaseNotes(releases)}\n\n" +
                           
                           $"Do you want to update?";
             var result = MessageBox.Show(message, "Update Available", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -80,34 +50,6 @@ public static partial class AutoUpdater {
         }
     }
 
-    private static async Task<List<GitHubRelease>?> GetAllReleasesAsync() {
-        using var perf = PerformanceLogger.Log();
-        try {
-            var response = await Client.GetStringAsync($"https://api.github.com/repos/{OWNER}/{REPO}/releases");
-            return JsonSerializer.Deserialize<List<GitHubRelease>>(response, JsonOptions) ?? [];
-        } catch {
-            return null;
-        }
-    }
-
-    private static string GetCumulativeReleaseNotes(List<GitHubRelease> releases) {
-        using var perf = PerformanceLogger.Log();
-        var relevantReleases = releases.Where(r => IsNewer(r.TagName)).OrderBy(r => Version.Parse(r.TagName));
-
-        var notes = new System.Text.StringBuilder();
-        foreach (var release in relevantReleases) {
-            var version = release.TagName.TrimStart('v');
-            notes.AppendLine($"{version}:");
-            var releaseBody = PatchnoteStartRegex().Replace(release.Body.Trim(), "- ");
-            notes.AppendLine(releaseBody);
-            notes.AppendLine();
-        }
-
-        return notes.ToString().TrimEnd();
-    }
-
-    public static bool IsNewer(string version) => Version.Parse(version) > Version.Parse(CurrentVersion);
-
     private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) {
         using var perf = PerformanceLogger.Log();
         Directory.CreateDirectory(UpdateDirectory);
@@ -115,9 +57,7 @@ public static partial class AutoUpdater {
         var assetUrl = release.Assets[0].BrowserDownloadUrl;
         var zipPath = Path.Combine(UpdateDirectory, "update.zip");
 
-        await using (var stream = await Client.GetStreamAsync(assetUrl))
-            await using (var fileStream = File.Create(zipPath))
-                await stream.CopyToAsync(fileStream);
+        await GitHubDownloader.DownloadReleaseAssetAsync(assetUrl, zipPath);
 
         var extractPath = Path.Combine(UpdateDirectory, "extracted");
         if (Directory.Exists(extractPath))
@@ -136,7 +76,7 @@ public static partial class AutoUpdater {
         };
     
         Logger.Log(LogLevel.Info, $"Attempting to start update script...");
-        Process process = null;
+        Process? process;
         try {
             process = Process.Start(startInfo);
         } catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) {
@@ -202,7 +142,4 @@ public static partial class AutoUpdater {
         File.WriteAllText(scriptPath, script);
         return scriptPath;
     }
-
-    [GeneratedRegex(@"(?m)^\* ")]
-    private static partial Regex PatchnoteStartRegex();
 }

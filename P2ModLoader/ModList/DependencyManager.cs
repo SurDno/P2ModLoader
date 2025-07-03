@@ -1,6 +1,8 @@
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
+using P2ModLoader.Update;
+using AutoUpdater = P2ModLoader.Update.AutoUpdater;
 
 namespace P2ModLoader.ModList;
 
@@ -23,7 +25,7 @@ public static class DependencyManager {
         }
         
         if (!string.IsNullOrEmpty(mod.Info.MinLoaderVersion)) {
-            if (AutoUpdater.IsNewer(mod.Info.MinLoaderVersion)) {
+            if (VersionComparison.IsLoaderNewer(mod.Info.MinLoaderVersion)) {
                 return new DependencyValidation {
                     HasErrors = true,
                     ErrorMessage = $"\r\nThis mod requires P2ModLoader version {mod.Info.MinLoaderVersion} or newer." +

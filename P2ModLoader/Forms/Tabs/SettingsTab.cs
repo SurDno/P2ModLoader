@@ -2,6 +2,7 @@ using System.Diagnostics;
 using P2ModLoader.Abstract;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
+using P2ModLoader.Update;
 
 namespace P2ModLoader.Forms.Tabs;
 

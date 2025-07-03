@@ -3,6 +3,8 @@ using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching;
+using P2ModLoader.Update;
+using AutoUpdater = P2ModLoader.Update.AutoUpdater;
 
 namespace P2ModLoader.Forms;
 
@@ -28,7 +30,7 @@ public class MainForm : Form {
 
     private void InitializeTabs() {
         using var perf = PerformanceLogger.Log();
-        Text = $"P2ModLoader {AutoUpdater.CurrentVersion}";
+        Text = $"P2ModLoader {VersionComparison.CurrentLoaderVersion}";
         Size = SettingsHolder.WindowSize;
         MinimumSize = new Size(600, 700); 
 
