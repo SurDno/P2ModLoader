@@ -128,16 +128,23 @@ public static partial class AutoUpdater {
 
         var updateScript = CreateUpdateScript(extractPath);
         var startInfo = new ProcessStartInfo {
-            FileName = "cmd.exe",
-            Arguments = $"/c {updateScript}",
+            FileName = updateScript,
             WindowStyle = ProcessWindowStyle.Hidden,
             UseShellExecute = true,
-            Verb = "runas"
+            Verb = "runas",
+            WorkingDirectory = Path.GetDirectoryName(updateScript)!
         };
     
         Logger.Log(LogLevel.Info, $"Attempting to start update script...");
-        var process = Process.Start(startInfo);
-    
+        Process process = null;
+        try {
+            process = Process.Start(startInfo);
+        } catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) {
+            MessageBox.Show("Update process was cancelled by user.", "Update Cancelled", 
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
         await Task.Delay(500);
         if (process != null) {
             Logger.Log(LogLevel.Info, $"Update script started with PID: {process.Id}.");
