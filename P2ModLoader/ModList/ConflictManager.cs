@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using P2ModLoader.Data;
+using P2ModLoader.Forms;
 using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
@@ -37,8 +39,17 @@ public static class ConflictManager {
         _conflictCache.Clear();
 
         var modsList = allMods.ToList();
-        foreach (var mod in modsList) {
+        
+        using var progressForm = new ProgressForm();
+        progressForm.Text = "Preloading mods...";
+        progressForm.TitleText = "Analysing mod conflicts.";
+        progressForm.Show();
+        Application.DoEvents();
+
+        for (var index = 0; index < modsList.Count; index++) {
+            var mod = modsList[index];
             var key = NormalizePath(mod.FolderPath);
+            progressForm.UpdateProgress(index, modsList.Count, $"Preloading conflicts for mod {mod.FolderName}");
             _conflictCache[key] = ComputeAllConflicts(mod, modsList);
         }
     }

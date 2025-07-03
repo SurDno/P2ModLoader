@@ -6,6 +6,7 @@ namespace P2ModLoader.Forms;
 public class ProgressForm : Form {
 	private readonly ProgressBar _progressBar;
 	private readonly Label _statusLabel;
+	private readonly Label _titleLabel;
 
 	public ProgressForm() {
 		using var perf = PerformanceLogger.Log();
@@ -17,8 +18,8 @@ public class ProgressForm : Form {
 		StartPosition = FormStartPosition.CenterScreen;
 		Text = "Loading Mods";
 		TopMost = true;
-
-		var titleLabel = new Label {
+		
+		_titleLabel = new Label {
 			Text = "Patching Game Files...",
 			AutoSize = true,
 			Location = new Point(20, 10)
@@ -36,13 +37,18 @@ public class ProgressForm : Form {
 			Location = new Point(20, 80)
 		};
 
-		Controls.AddRange([titleLabel, _progressBar, _statusLabel]);
+		Controls.AddRange([_titleLabel, _progressBar, _statusLabel]);
 	}
 
 	[AllowNull] 
 	public sealed override string Text {
 		get => base.Text;
 		set => base.Text = value;
+	}
+
+	public string TitleText {
+		get => _titleLabel.Text;
+		set => _titleLabel.Text = value;
 	}
 
 	public void UpdateProgress(int current, int total, string status) {
