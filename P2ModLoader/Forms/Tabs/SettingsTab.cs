@@ -114,7 +114,7 @@ public class SettingsTab : BaseTab {
         logLevelComboBox.Height = 28;
         logLevelComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
 
-        var logLevels = Enum.GetValues<LogLevel>().Cast<LogLevel>().ToArray();
+        var logLevels = Enum.GetValues<LogLevel>().ToArray();
         foreach (var level in logLevels) {
             logLevelComboBox.Items.Add(new { Text = level.ToString(), Value = level });
         }

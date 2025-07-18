@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
 using P2ModLoader.Logging;

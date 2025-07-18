@@ -1,6 +1,6 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using P2ModLoader.Logging;
-using System.Text;
 using static P2ModLoader.Update.VersionComparison;
 
 namespace P2ModLoader.Update;

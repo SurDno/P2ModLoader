@@ -1,4 +1,5 @@
-using P2ModLoader.Data;using System.Text.Json;
+using System.Text.Json;
+using P2ModLoader.Data;
 using P2ModLoader.Logging;
 
 namespace P2ModLoader.Helper;

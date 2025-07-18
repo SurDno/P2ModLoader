@@ -4,8 +4,7 @@ using P2ModLoader.Logging;
 namespace P2ModLoader.Patching.Xml;
 
 public static class XPathCalculator {
-    private static readonly Dictionary<XElement, string> XPathCache = new();
-    private static readonly Dictionary<XElement, string> IdCache = new();
+    private static readonly Dictionary<XElement, string> XPathCache = new(), IdCache = new();
     
     public static string GetXPathWithIndex(XElement element) {
         using var perf = PerformanceLogger.Log();

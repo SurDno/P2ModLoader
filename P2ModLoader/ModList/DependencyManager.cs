@@ -1,8 +1,6 @@
 using P2ModLoader.Data;
-using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.Update;
-using AutoUpdater = P2ModLoader.Update.AutoUpdater;
 
 namespace P2ModLoader.ModList;
 

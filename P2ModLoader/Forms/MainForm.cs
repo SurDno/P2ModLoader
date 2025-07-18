@@ -19,7 +19,7 @@ public class MainForm : Form {
         using var perf = PerformanceLogger.Log();
         //InitializeComponent();
         InitializeTabs();
-        this.Load += MainForm_Load!;
+        Load += MainForm_Load!;
     }
     
     private static async void MainForm_Load(object sender, EventArgs e) {

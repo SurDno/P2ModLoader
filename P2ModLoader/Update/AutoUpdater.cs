@@ -1,13 +1,12 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 
 namespace P2ModLoader.Update;
 
-public static partial class AutoUpdater {
+public static class AutoUpdater {
     private const string OWNER = "SurDno";
     private const string REPO = "P2ModLoader";
     
@@ -79,7 +78,7 @@ public static partial class AutoUpdater {
         Process? process;
         try {
             process = Process.Start(startInfo);
-        } catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) {
+        } catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) {
             MessageBox.Show("Update process was cancelled by user.", "Update Cancelled", 
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
