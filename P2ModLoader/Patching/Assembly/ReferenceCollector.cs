@@ -1,7 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using UsingList = Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CSharp.Syntax.UsingDirectiveSyntax>;
 
@@ -27,9 +26,12 @@ public static class ReferenceCollector {
 
 	public static UsingList CollectAllUsings(SyntaxNode root) {
 		using var perf = PerformanceLogger.Log();
-		var allUsings = root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList();
+		return SyntaxFactory.List(root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList());
+	}
 
-		return SyntaxFactory.List(allUsings);
+	public static UsingList MergeUsings(SyntaxNode originalNode, SyntaxNode updatedNode) {
+		using var perf = PerformanceLogger.Log();
+		return MergeUsings(CollectAllUsings(originalNode), CollectAllUsings(updatedNode));
 	}
 
 	private static UsingList MergeUsings(UsingList originalUsings, UsingList updatedUsings) {
@@ -42,10 +44,5 @@ public static class ReferenceCollector {
 			.ToList();
 
 		return SyntaxFactory.List(allUsings);
-	}
-
-	public static UsingList MergeUsings(SyntaxNode originalNode, SyntaxNode updatedNode) {
-		using var perf = PerformanceLogger.Log();
-		return MergeUsings(CollectAllUsings(originalNode), CollectAllUsings(updatedNode));
 	}
 }
