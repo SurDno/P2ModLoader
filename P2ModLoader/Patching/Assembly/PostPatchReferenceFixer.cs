@@ -5,24 +5,20 @@ namespace P2ModLoader.Patching.Assembly;
 public static class PostPatchReferenceFixer {
     public static void FixReferencesForPatchedType(TypeDefinition type, string tempAsm, ModuleDefinition module) { 	
         for (var i = module.AssemblyReferences.Count - 1; i >= 0; i--) {
-            if (module.AssemblyReferences[i].Name == tempAsm) {
-                module.AssemblyReferences.RemoveAt(i);
-            }
+            if (module.AssemblyReferences[i].Name != tempAsm) continue;
+            module.AssemblyReferences.RemoveAt(i);
         }
 
         foreach (var field in type.Fields) {
-            if (field.FieldType.Scope?.Name == tempAsm) {
-                if (field.FieldType.FullName == type.FullName) {
-                    field.FieldType = module.ImportReference(type);
-                }
-            }
+            if (field.FieldType.Scope?.Name != tempAsm) continue;
+            if (field.FieldType.FullName != type.FullName) continue;
+            field.FieldType = module.ImportReference(type);
         }
 
         foreach (var prop in type.Properties) {
-            if (prop.PropertyType.Scope?.Name == tempAsm &&
-                prop.PropertyType.FullName == type.FullName) {
-                prop.PropertyType = module.ImportReference(type);
-            }
+            if (prop.PropertyType.Scope?.Name != tempAsm) continue;
+            if (prop.PropertyType.FullName != type.FullName) continue;
+            prop.PropertyType = module.ImportReference(type);
         }
 
         foreach (var method in type.Methods) {

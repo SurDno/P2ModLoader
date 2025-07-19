@@ -165,7 +165,7 @@ public static class AssemblyPatcher {
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOptimizationLevel(OptimizationLevel.Release)
-                .WithPlatform(Platform.AnyCpu)
+                .WithPlatform(Platform.AnyCpu).WithAllowUnsafe(true)
         );
 
         using var ms = new MemoryStream();
@@ -290,7 +290,7 @@ public static class AssemblyPatcher {
             references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOptimizationLevel(OptimizationLevel.Release)
-                .WithPlatform(Platform.AnyCpu)
+                .WithPlatform(Platform.AnyCpu).WithAllowUnsafe(true)
         );
 
         using var ms = new MemoryStream();
