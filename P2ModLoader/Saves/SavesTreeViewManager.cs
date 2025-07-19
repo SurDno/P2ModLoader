@@ -1,7 +1,6 @@
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
 using P2ModLoader.Helper;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Saves;
 
@@ -11,8 +10,7 @@ public class SavesTreeViewManager {
     private readonly SavesTreeViewBuilder _treeViewBuilder;
     private readonly ContextMenuStrip _contextMenu;
 
-    public SavesTreeViewManager(TreeView treeView, ProfileManager manager, SavesTreeViewBuilder treeViewBuilder) {
-        using var perf = PerformanceLogger.Log();
+    public SavesTreeViewManager(TreeView treeView, ProfileManager manager, SavesTreeViewBuilder treeViewBuilder) { 	
         _treeView = treeView;
         _profileManager = manager;
         _treeViewBuilder = treeViewBuilder;
@@ -21,8 +19,7 @@ public class SavesTreeViewManager {
         InitializeTreeView();
     }
 
-    private void InitializeTreeView() {
-        using var perf = PerformanceLogger.Log();
+    private void InitializeTreeView() { 	
         _treeView.ShowLines = true;
         _treeView.HideSelection = false;
         _treeView.ContextMenuStrip = _contextMenu;
@@ -33,8 +30,7 @@ public class SavesTreeViewManager {
         _treeView.MouseDown += HandleMouseDown;
     }
 
-    private ContextMenuStrip CreateContextMenu() {
-        using var perf = PerformanceLogger.Log();
+    private ContextMenuStrip CreateContextMenu() { 	
         var menu = new ContextMenuStrip();
         var editMenuItem = new ToolStripMenuItem("Edit Profile Name", null, HandleEditProfile);
         var deleteMenuItem = new ToolStripMenuItem("Delete Selected", null, HandleDeleteSelected);
@@ -42,8 +38,7 @@ public class SavesTreeViewManager {
         return menu;
     }
 
-    public void RefreshTreeView() {
-        using var perf = PerformanceLogger.Log();
+    public void RefreshTreeView() { 	
         try {
             _profileManager.LoadProfiles();
 
@@ -60,8 +55,7 @@ public class SavesTreeViewManager {
         }
     }
 
-    private void HandleMouseClick(object? sender, MouseEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void HandleMouseClick(object? sender, MouseEventArgs e) { 	
         if (e.Button != MouseButtons.Right) return;
 
         var clickedNode = _treeView.GetNodeAt(e.X, e.Y);
@@ -72,8 +66,7 @@ public class SavesTreeViewManager {
         _contextMenu.Show(_treeView, e.Location);
     }
     
-    private void HandleMouseDown(object? sender, MouseEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void HandleMouseDown(object? sender, MouseEventArgs e) { 	
         if (e.Clicks != 2) return; 
         var node = _treeView.GetNodeAt(e.X, e.Y);
         
@@ -87,8 +80,7 @@ public class SavesTreeViewManager {
         });
     }
 
-    private void UpdateContextMenuState(TreeNode node) {
-        using var perf = PerformanceLogger.Log();
+    private void UpdateContextMenuState(TreeNode node) { 	
         var editMenuItem = (ToolStripMenuItem)_contextMenu.Items[0];
         var deleteMenuItem = (ToolStripMenuItem)_contextMenu.Items[1];
         
@@ -101,27 +93,23 @@ public class SavesTreeViewManager {
         deleteMenuItem.Enabled = nodeData.Type is NodeData.NodeType.Profile or NodeData.NodeType.Save;
     }
 
-    private void HandleEditProfile(object? sender, EventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void HandleEditProfile(object? sender, EventArgs e) { 	
         EditProfileNode(_treeView.SelectedNode);
     }
 
-    private void HandleDeleteSelected(object? sender, EventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void HandleDeleteSelected(object? sender, EventArgs e) { 	
         var selectedNode = _treeView.SelectedNode;
         if (selectedNode?.Tag is not NodeData data) return;
 
         DeleteNode(selectedNode, data);
     }
 
-    private void HandleKeyDown(object? sender, KeyEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void HandleKeyDown(object? sender, KeyEventArgs e) { 	
         if (e.KeyCode == Keys.Delete && _treeView.SelectedNode != null)
             HandleDeleteSelected(sender, e);
     }
 
-    private void EditProfileNode(TreeNode node) {
-        using var perf = PerformanceLogger.Log();
+    private void EditProfileNode(TreeNode node) { 	
         if (_treeView.SelectedNode?.Tag is not NodeData { Type: NodeData.NodeType.Profile } nodeData)
             return;
     
@@ -143,8 +131,7 @@ public class SavesTreeViewManager {
         }
     }
     
-    private void RenameProfile(TreeNode node, NodeData nodeData, string newName) {
-        using var perf = PerformanceLogger.Log();
+    private void RenameProfile(TreeNode node, NodeData nodeData, string newName) { 	
         var oldPath = Path.Combine(_profileManager.GetSavesDirectory(), node.Text.Replace(" (current)", ""));
         var newPath = Path.Combine(_profileManager.GetSavesDirectory(), newName);
 
@@ -154,8 +141,7 @@ public class SavesTreeViewManager {
         _profileManager.RenameProfile(nodeData.XElement!, newName);
     }
 
-    private void DeleteNode(TreeNode node, NodeData data) {
-        using var perf = PerformanceLogger.Log();
+    private void DeleteNode(TreeNode node, NodeData data) { 	
         var message = data.Type switch {
             NodeData.NodeType.Profile => "Are you sure you want to delete this profile?",
             NodeData.NodeType.Save => "Are you sure you want to delete this save?",

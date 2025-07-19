@@ -1,12 +1,10 @@
 using Mono.Cecil;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class AttributesCloner {
 	public static void CloneAttributes(ICustomAttributeProvider source, ICustomAttributeProvider target, 
-		ModuleDefinition targetModule) {
-		using var perf = PerformanceLogger.Log();
+		ModuleDefinition targetModule) { 	
 		foreach (var attribute in source.CustomAttributes) {
 			CustomAttribute importedAttribute = new(targetModule.ImportReference(attribute.Constructor));
 

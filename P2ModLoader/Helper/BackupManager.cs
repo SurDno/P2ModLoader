@@ -8,8 +8,7 @@ public static class BackupManager {
 	// Always call only after validating InstallPath is not null.
 	private static string BackupFolderPath => Path.Combine(SettingsHolder.InstallPath!, BACKUPS_RELATIVE_PATH);
 	
-	public static bool TryRecoverBackups() {
-		using var perf = PerformanceLogger.Log();
+	public static bool TryRecoverBackups() { 	
 		if (SettingsHolder.InstallPath == null)
 			return false;
 
@@ -34,8 +33,7 @@ public static class BackupManager {
 		return true;
 	}
 	
-	public static string? CreateBackup(string filePath) {
-		using var perf = PerformanceLogger.Log();
+	public static string? CreateBackup(string filePath) { 	
 		if (SettingsHolder.InstallPath == null)
 			return null;
 		
@@ -58,8 +56,7 @@ public static class BackupManager {
 		return backupPath;
 	}
 	
-	public static string? GetBackupPath(string filePath) {
-		using var perf = PerformanceLogger.Log();
+	public static string? GetBackupPath(string filePath) { 	
 		if (SettingsHolder.InstallPath == null)
 			return null;
         

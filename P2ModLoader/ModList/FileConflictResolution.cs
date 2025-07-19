@@ -1,13 +1,11 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
 public static class FileConflictResolution {
-    public static bool AreFilesCompatible(string path1, string path2) {
-        using var perf = PerformanceLogger.Log();
+    public static bool AreFilesCompatible(string path1, string path2) { 	
         var ext = Path.GetExtension(path1).ToLowerInvariant();
         return ext switch {
             // TODO: add checks that no same node modification is taking place. 
@@ -17,8 +15,7 @@ public static class FileConflictResolution {
         };
     }
 
-    private static bool AreCSharpFilesCompatible(string path1, string path2) {
-        using var perf = PerformanceLogger.Log();
+    private static bool AreCSharpFilesCompatible(string path1, string path2) { 	
         var tree1 = CSharpSyntaxTree.ParseText(File.ReadAllText(path1));
         var tree2 = CSharpSyntaxTree.ParseText(File.ReadAllText(path2));
         
@@ -33,8 +30,7 @@ public static class FileConflictResolution {
             .OfType<MethodDeclarationSyntax>()
             .Select(m => $"{GetFullTypeName(m)}.{m.Identifier.Text}");
 
-    private static string GetFullTypeName(MethodDeclarationSyntax method) {
-        using var perf = PerformanceLogger.Log();
+    private static string GetFullTypeName(MethodDeclarationSyntax method) { 	
         var parts = new List<string>();
         var current = method.Parent;
         
@@ -47,8 +43,7 @@ public static class FileConflictResolution {
         return string.Join(".", parts);
     }
 
-    private static bool FilesAreIdentical(string path1, string path2) {
-        using var perf = PerformanceLogger.Log();
+    private static bool FilesAreIdentical(string path1, string path2) { 	
         using var fs1 = new FileStream(path1, FileMode.Open, FileAccess.Read);
         using var fs2 = new FileStream(path2, FileMode.Open, FileAccess.Read);
         

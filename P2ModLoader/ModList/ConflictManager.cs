@@ -1,6 +1,5 @@
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
@@ -32,8 +31,7 @@ public static class ConflictManager {
 
     public static void ClearCache() => _conflictCache.Clear();
 
-    public static void PrecomputeAllConflicts(IEnumerable<Mod> allMods) {
-        using var perf = PerformanceLogger.Log();
+    public static void PrecomputeAllConflicts(IEnumerable<Mod> allMods) { 	
         _conflictCache.Clear();
 
         var modsList = allMods.ToList();
@@ -52,8 +50,7 @@ public static class ConflictManager {
         }
     }
 
-    public static ModConflictDisplay GetConflictDisplay(Mod mod, IEnumerable<Mod> allMods) {
-        using var perf = PerformanceLogger.Log();
+    public static ModConflictDisplay GetConflictDisplay(Mod mod, IEnumerable<Mod> allMods) { 	
 
         var key = NormalizePath(mod.FolderPath);
         if (!_conflictCache.TryGetValue(key, out var allConflicts))
@@ -92,8 +89,7 @@ public static class ConflictManager {
         return new ModConflictDisplay(NoConflictColor, string.Empty);
     }
 
-    private static List<ConflictInfo> ComputeAllConflicts(Mod mod, List<Mod> allMods) {
-        using var perf = PerformanceLogger.Log();
+    private static List<ConflictInfo> ComputeAllConflicts(Mod mod, List<Mod> allMods) { 	
         var conflicts = new List<ConflictInfo>();
         var modRequirements = mod.Info.Requirements.Select(NormalizePath).ToList();
 
@@ -125,8 +121,7 @@ public static class ConflictManager {
         return conflicts;
     }
 
-    private static IEnumerable<ConflictInfo> GetFileConflicts(Mod mod, Mod otherMod) {
-        using var perf = PerformanceLogger.Log();
+    private static IEnumerable<ConflictInfo> GetFileConflicts(Mod mod, Mod otherMod) { 	
         var extensions = new[] { "*.dll", "*.cs", "*.xml", "*.xml.gz" };
 
         foreach (var ext in extensions) {
@@ -147,8 +142,7 @@ public static class ConflictManager {
         }
     }
 
-    private static IEnumerable<ConflictInfo> GetPaths(Mod mod, Mod otherMod) {
-        using var perf = PerformanceLogger.Log();
+    private static IEnumerable<ConflictInfo> GetPaths(Mod mod, Mod otherMod) { 	
         foreach (var path in GetAllPaths(mod.FolderPath)) {
             var rel = Path.GetRelativePath(mod.FolderPath, path);
             var other = Path.Combine(otherMod.FolderPath, rel);
@@ -171,14 +165,12 @@ public static class ConflictManager {
         }
     }
 
-    private static IEnumerable<string> GetAllPaths(string root) {
-        using var perf = PerformanceLogger.Log();
+    private static IEnumerable<string> GetAllPaths(string root) { 	
         return Directory.GetFiles(root, "*.*", SearchOption.AllDirectories)
             .Concat(Directory.GetDirectories(root, "*", SearchOption.AllDirectories));
     }
 
-    private static bool IsConflictResolved(Mod mod1, Mod mod2, string? relPath, IEnumerable<Mod> enabledMods) {
-        using var perf = PerformanceLogger.Log();
+    private static bool IsConflictResolved(Mod mod1, Mod mod2, string? relPath, IEnumerable<Mod> enabledMods) { 	
         var name1 = NormalizePath(mod1.FolderPath);
         var name2 = NormalizePath(mod2.FolderPath);
 
@@ -199,8 +191,7 @@ public static class ConflictManager {
         );
     }
 
-    private static string NormalizePath(string path) {
-        using var perf = PerformanceLogger.Log();
+    private static string NormalizePath(string path) { 	
         return new DirectoryInfo(path.TrimEnd('/', '\\')).Name.ToLowerInvariant();
     }
 }

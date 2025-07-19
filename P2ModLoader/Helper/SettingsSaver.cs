@@ -24,8 +24,7 @@ public static class SettingsSaver {
     public static void PauseSaving() => _pauseSaving = true; 
     public static void UnpauseSaving() => _pauseSaving = false; 
     
-    public static void LoadSettings() {
-        using var perf = PerformanceLogger.Log();
+    public static void LoadSettings() { 	
         if (File.Exists(SettingsPath)) {
             try {
                 var settings = JsonSerializer.Deserialize<SavedSettings>(File.ReadAllText(SettingsPath));
@@ -60,8 +59,7 @@ public static class SettingsSaver {
         _subscribed = true;
     }
     
-    private static void SaveSettings() {
-        using var perf = PerformanceLogger.Log();
+    private static void SaveSettings() { 	
         if (_pauseSaving) return;
         
         Logger.Log(LogLevel.Info, $"Saving new settings to settings.json.");

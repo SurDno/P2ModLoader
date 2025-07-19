@@ -20,8 +20,7 @@ public static class InstallationLocator {
     private const string APPDATA_PATH = @"AppData\LocalLow\Ice-Pick Lodge\Pathologic 2";
     private const string LOGFILE_NAME = @"output_log.txt";
     
-    public static string? FindSteam() {
-        using var perf = PerformanceLogger.Log();
+    public static string? FindSteam() { 	
         var steamPath = GetSteamPathFromRegistry(STEAM_32_BIT_PATH);
         steamPath ??= GetSteamPathFromRegistry(STEAM_64_BIT_PATH);
 
@@ -35,8 +34,7 @@ public static class InstallationLocator {
         return steamPath;
     }
 
-    public static string? FindInstall() {
-        using var perf = PerformanceLogger.Log();
+    public static string? FindInstall() { 	
         var steamPath = FindSteam();
         if (!string.IsNullOrEmpty(steamPath)) {
             Logger.Log(LogLevel.Info, $"Found Steam installation: {steamPath}");
@@ -47,8 +45,7 @@ public static class InstallationLocator {
         return null;
     }
 
-    private static string? FindSteamInstall(string steamPath) {
-        using var perf = PerformanceLogger.Log();
+    private static string? FindSteamInstall(string steamPath) { 	
         var libraryFoldersPath = Path.Combine(steamPath, STEAM_LIBRARY_FOLDERS_PATH);
         if (!File.Exists(libraryFoldersPath)) {
             libraryFoldersPath = Path.Combine(steamPath, STEAM_LIBRARY_FOLDERS_PATH.ToLower());
@@ -62,14 +59,12 @@ public static class InstallationLocator {
         return installPath;
     }
 
-    private static string? GetSteamPathFromRegistry(string registryPath) {
-        using var perf = PerformanceLogger.Log();
+    private static string? GetSteamPathFromRegistry(string registryPath) { 	
         using var key = Registry.LocalMachine.OpenSubKey(registryPath);
         return key?.GetValue("InstallPath") as string;
     }
 
-    private static string? FindPathologicSteamPath(string libraryFoldersPath) {
-        using var perf = PerformanceLogger.Log();
+    private static string? FindPathologicSteamPath(string libraryFoldersPath) { 	
         var content = File.ReadAllText(libraryFoldersPath);
 
         var pathRegex = new Regex("\"path\"\\s+\"([^\"]+)\"");
@@ -102,8 +97,7 @@ public static class InstallationLocator {
         return currentPath != null ? Path.Combine(currentPath, PATHOLOGIC_STEAM_RELATIVE_PATH) : null;
     }
 
-    public static string? FindAppData() {
-        using var perf = PerformanceLogger.Log();
+    public static string? FindAppData() { 	
         var userPath = Environment.GetEnvironmentVariable("USERPROFILE");
         var appdataPath = Path.Combine(userPath!, APPDATA_PATH);
         Logger.Log(LogLevel.Info, $"appdata\n{userPath}\n{appdataPath}");
@@ -111,8 +105,7 @@ public static class InstallationLocator {
         return Directory.Exists(appdataPath) ? appdataPath : null;
     }
 
-    public static string FindLogFile() {
-        using var perf = PerformanceLogger.Log();
+    public static string FindLogFile() { 	
         return Path.Combine(FindAppData()!, LOGFILE_NAME);
     }
 }

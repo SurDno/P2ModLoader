@@ -8,8 +8,7 @@ public static class XmlPatcher {
     private static readonly Dictionary<XElement, Dictionary<string, XElement>> IdBasedLookupCache = new();
     private static readonly Dictionary<XElement, List<XElement>> ChildrenByNameCache = new();
     
-    public static bool PatchXml(string sourcePath, string modPath, string targetPath) {
-        using var perf = PerformanceLogger.Log();
+    public static bool PatchXml(string sourcePath, string modPath, string targetPath) { 	
         ClearAllCaches();
         
         try {
@@ -43,15 +42,13 @@ public static class XmlPatcher {
         }
     }
     
-    private static void ClearAllCaches() {
-        using var perf = PerformanceLogger.Log();
+    private static void ClearAllCaches() { 	
         XPathCalculator.ClearCache();
         IdBasedLookupCache.Clear();
         ChildrenByNameCache.Clear();
     }
     
-    private static void BuildOptimizedCaches(XElement root) {
-        using var perf = PerformanceLogger.Log();
+    private static void BuildOptimizedCaches(XElement root) { 	
         
         foreach (var element in root.DescendantsAndSelf()) {
             var idLookup = new Dictionary<string, XElement>();
@@ -73,8 +70,7 @@ public static class XmlPatcher {
         }
     }
 
-    private static void MergeXmlNodes(XElement target, XElement src, XElement backup) {
-        using var perf = PerformanceLogger.Log();
+    private static void MergeXmlNodes(XElement target, XElement src, XElement backup) { 	
         if (XNode.DeepEquals(src, backup)) return;
         
         if (!src.HasElements && src.Value != backup.Value) {
@@ -96,8 +92,7 @@ public static class XmlPatcher {
         ProcessAttributesBatch(target, src, backup);
     }
     
-    private static void ProcessChildrenInBatches(XElement target, XElement backup, List<XElement> srcElements) {
-        using var perf = PerformanceLogger.Log();
+    private static void ProcessChildrenInBatches(XElement target, XElement backup, List<XElement> srcElements) { 	
         Logger.Log(LogLevel.Info, $"Processing {srcElements.Count} children in batches");
 
         var elementsWithIds = new List<XElement>();
@@ -126,8 +121,7 @@ public static class XmlPatcher {
         }
     }
 
-    private static void ProcessElementsWithIds(XElement target, XElement backup, List<XElement> elementsWithIds) {
-        using var perf = PerformanceLogger.Log();
+    private static void ProcessElementsWithIds(XElement target, XElement backup, List<XElement> elementsWithIds) { 	
         var targetIdLookup = IdBasedLookupCache.GetValueOrDefault(target, new Dictionary<string, XElement>());
         var backupIdLookup = IdBasedLookupCache.GetValueOrDefault(backup, new Dictionary<string, XElement>());
 
@@ -149,8 +143,7 @@ public static class XmlPatcher {
         }
     }
 
-    private static void ProcessElementsBatch(XElement target, XElement backup, List<XElement> batch) {
-        using var perf = PerformanceLogger.Log();
+    private static void ProcessElementsBatch(XElement target, XElement backup, List<XElement> batch) { 	
         var targetChildren = ChildrenByNameCache.GetValueOrDefault(target, target.Elements().ToList());
         var backupChildren = ChildrenByNameCache.GetValueOrDefault(backup, backup.Elements().ToList());
         
@@ -167,8 +160,7 @@ public static class XmlPatcher {
         }
     }
     
-    private static void ProcessChildrenOptimized(XElement target, XElement backup, List<XElement> srcElements) {
-        using var perf = PerformanceLogger.Log();
+    private static void ProcessChildrenOptimized(XElement target, XElement backup, List<XElement> srcElements) { 	
         foreach (var sourceChild in srcElements) {
             var targetChild = FindMatchingNodeUltraFast(target, sourceChild);
             var baseChild = FindMatchingNodeUltraFast(backup, sourceChild);
@@ -181,8 +173,7 @@ public static class XmlPatcher {
         }
     }
     
-    private static void ProcessAttributesBatch(XElement target, XElement src, XElement backup) {
-        using var perf = PerformanceLogger.Log();
+    private static void ProcessAttributesBatch(XElement target, XElement src, XElement backup) { 	
         var attributesToUpdate = (from attr in src.Attributes() let baseAttr = backup.Attribute(attr.Name)
             where baseAttr == null || baseAttr.Value != attr.Value select attr).ToList();
 
@@ -195,8 +186,7 @@ public static class XmlPatcher {
         }
     }
     
-    private static XElement? FindMatchingNodeUltraFast(XElement parent, XElement nodeToFind) {
-        using var perf = PerformanceLogger.Log();
+    private static XElement? FindMatchingNodeUltraFast(XElement parent, XElement nodeToFind) { 	
         var idAttr = nodeToFind.Attribute("id")?.Value;
         if (!string.IsNullOrEmpty(idAttr) && IdBasedLookupCache.TryGetValue(parent, out var idLookup1))
             return idLookup1.GetValueOrDefault(idAttr);
@@ -212,8 +202,7 @@ public static class XmlPatcher {
         return indexInSameNameSiblings < sameNameElements.Count ? sameNameElements[indexInSameNameSiblings] : null;
     }
     
-    private static XElement? FindMatchingNodeFast(List<XElement> childrenList, XElement nodeToFind) {
-        using var perf = PerformanceLogger.Log();
+    private static XElement? FindMatchingNodeFast(List<XElement> childrenList, XElement nodeToFind) { 	
         var sameNameElements = childrenList.Where(e => e.Name == nodeToFind.Name).ToList();
         var indexInSameNameSiblings = nodeToFind.ElementsBeforeSelf(nodeToFind.Name).Count();
         return indexInSameNameSiblings < sameNameElements.Count ? sameNameElements[indexInSameNameSiblings] : null;

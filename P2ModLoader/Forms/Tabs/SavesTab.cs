@@ -13,8 +13,7 @@ public class SavesTab : BaseTab {
 	private readonly string? _savesDirectory;
 	private readonly string? _profilesPath;
 
-	public SavesTab(TabPage page) : base(page) {
-		using var perf = PerformanceLogger.Log();
+	public SavesTab(TabPage page) : base(page) { 	
 		var appData = InstallationLocator.FindAppData();
 		if (appData != null) {
 			_savesDirectory = Path.Combine(appData, "Saves");
@@ -31,8 +30,7 @@ public class SavesTab : BaseTab {
 		}
 	}
 
-	protected sealed override void InitializeComponents() {
-		using var perf = PerformanceLogger.Log();
+	protected sealed override void InitializeComponents() { 	
 		Logger.Log(LogLevel.Info, $"Appdata found, initializing saves tree view.");
 		_savesTreeView = new TreeView { Dock = DockStyle.Fill };
 		_profileManager = new ProfileManager(_savesDirectory!, _profilesPath!);
@@ -44,8 +42,7 @@ public class SavesTab : BaseTab {
 		Logger.Log(LogLevel.Info, $"Saves tree view initialized.");
 	}
 
-	private void ShowErrorMessage() {
-		using var perf = PerformanceLogger.Log();
+	private void ShowErrorMessage() { 	
 		Logger.Log(LogLevel.Info, $"Appdata not found, cannot view save files.");
 		_messageLabel = new Label {
 			Text = "AppData for Pathologic 2 not found. " +

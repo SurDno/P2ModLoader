@@ -1,5 +1,4 @@
 using P2ModLoader.Helper;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Data;
 
@@ -14,8 +13,7 @@ public class ModInfo {
 	public List<string> LoadFirst { get; private set; } = [];
 	public string MinLoaderVersion { get; private set; }
 
-	public static ModInfo FromFile(string filePath) {
-		using var perf = PerformanceLogger.Log();
+	public static ModInfo FromFile(string filePath) { 	
 		var info = new ModInfo();
         
 		if (!File.Exists(filePath)) return info;

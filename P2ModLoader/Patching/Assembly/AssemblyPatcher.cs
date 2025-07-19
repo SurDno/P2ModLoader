@@ -14,8 +14,7 @@ using LanguageVersion = Microsoft.CodeAnalysis.CSharp.LanguageVersion;
 namespace P2ModLoader.Patching.Assembly;
 
 public static class AssemblyPatcher {
-    public static bool PatchAssembly(string dllPath, string updatedSourcePath) {
-        using var perf = PerformanceLogger.Log();
+    public static bool PatchAssembly(string dllPath, string updatedSourcePath) { 	
         var dllDirectory = Path.GetDirectoryName(Path.GetFullPath(dllPath))!;
         var fileCopy = Path.Combine(dllDirectory, $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
         File.Copy(dllPath, fileCopy, true);
@@ -143,8 +142,7 @@ public static class AssemblyPatcher {
     }
 
     private static bool TryAddNewType(List<MetadataReference> references, NamespaceDeclarationSyntax? namespaceDecl,
-        MemberDeclarationSyntax typeDecl, AssemblyDefinition originalAssembly, ReaderParameters readerParams) {
-        using var perf = PerformanceLogger.Log();
+        MemberDeclarationSyntax typeDecl, AssemblyDefinition originalAssembly, ReaderParameters readerParams) { 	
         var compilationUnit = SyntaxFactory.CompilationUnit();
         var updatedRoot = typeDecl.SyntaxTree.GetRoot();
         var usings = ReferenceCollector.CollectAllUsings(updatedRoot);
@@ -201,8 +199,7 @@ public static class AssemblyPatcher {
         return true;
     }
 
-    private static string GetFullTypeName(NamespaceDeclarationSyntax? nsDecl, MemberDeclarationSyntax typeDecl) {
-        using var perf = PerformanceLogger.Log();
+    private static string GetFullTypeName(NamespaceDeclarationSyntax? nsDecl, MemberDeclarationSyntax typeDecl) { 	
         var namespaceName = nsDecl?.Name.ToString() ?? "";
         var typeName = typeDecl switch {
             ClassDeclarationSyntax c => c.Identifier.Text,
@@ -224,8 +221,7 @@ public static class AssemblyPatcher {
         List<PropertyDeclarationSyntax> propertyGroup,
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
-        ReaderParameters readerParams) {
-        using var perf = PerformanceLogger.Log();
+        ReaderParameters readerParams) { 	
         string decompiledSource;
         try {
             decompiledSource = decompiler.DecompileTypeAsString(new FullTypeName(fullTypeName));
@@ -389,8 +385,7 @@ public static class AssemblyPatcher {
         return true;
     }
 
-    private static T? FindTypeDeclaration<T>(SyntaxNode node, string name) where T : TypeDeclarationSyntax {
-        using var perf = PerformanceLogger.Log();
+    private static T? FindTypeDeclaration<T>(SyntaxNode node, string name) where T : TypeDeclarationSyntax { 	
         foreach (var child in node.ChildNodes()) {
             if (child is T typed && typed.Identifier.Text == name)
                 return typed;
@@ -403,8 +398,7 @@ public static class AssemblyPatcher {
         return null;
     }
 
-    private static void PrintCompilationFailure(EmitResult result, SyntaxTree tree) {
-        using var perf = PerformanceLogger.Log();
+    private static void PrintCompilationFailure(EmitResult result, SyntaxTree tree) { 	
         Logger.Log(LogLevel.Error, $"Compilation failed!");
         foreach (var diagnostic in result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error)) {
             var lineSpan = diagnostic.Location.GetLineSpan();

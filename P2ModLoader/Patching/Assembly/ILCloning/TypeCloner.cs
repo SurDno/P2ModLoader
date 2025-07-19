@@ -1,11 +1,9 @@
 using Mono.Cecil;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class TypeCloner {
-    public static TypeDefinition CloneType(TypeDefinition src, ModuleDefinition targetModule) {
-        using var perf = PerformanceLogger.Log();
+    public static TypeDefinition CloneType(TypeDefinition src, ModuleDefinition targetModule) { 	
         var newType = new TypeDefinition(
             src.Namespace,
             src.Name,

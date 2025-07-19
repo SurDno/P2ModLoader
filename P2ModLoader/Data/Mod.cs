@@ -1,5 +1,3 @@
-using P2ModLoader.Logging;
-
 namespace P2ModLoader.Data;
 
 public class Mod {
@@ -16,8 +14,7 @@ public class Mod {
 		get => string.IsNullOrEmpty(_dependencyError) ? "" : $"\r\nDependency error: {_dependencyError}";
 	}
 
-	public Mod(string folderPath) {
-		using var perf = PerformanceLogger.Log();
+	public Mod(string folderPath) { 	
 		FolderPath = folderPath;
 		var infoPath = Path.Combine(folderPath, "ModInfo.ltx");
 		Info = ModInfo.FromFile(infoPath);
@@ -25,8 +22,7 @@ public class Mod {
 		LoadOrder = 0;
 	}
 
-	public string GetModificationTypes() {
-		using var perf = PerformanceLogger.Log();
+	public string GetModificationTypes() { 	
 		var modTypes = new List<string>();
     
 		AddToListIfDefinitionExists(modTypes, "dll", ".dll files", FolderPath);
@@ -39,8 +35,7 @@ public class Mod {
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}
 
-	private static void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) {
-		using var perf = PerformanceLogger.Log();
+	private static void AddToListIfDefinitionExists(List<string> modTypes, string ext, string result, string path) { 	
 		if (Directory.Exists(path) && Directory.GetFiles(path, $"*.{ext}", SearchOption.AllDirectories).Length != 0) 
 			modTypes.Add(result);
 	}

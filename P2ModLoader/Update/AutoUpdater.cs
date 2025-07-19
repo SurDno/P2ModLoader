@@ -14,8 +14,7 @@ public static class AutoUpdater {
     private static readonly string UpdateDirectory = Path.Combine(BaseDirectory, "Updates");
 
     
-    public static async Task CheckForUpdatesAsync(bool showNoUpdatesDialog = false) {
-        using var perf = PerformanceLogger.Log();
+    public static async Task CheckForUpdatesAsync(bool showNoUpdatesDialog = false) { 	
         Logger.Log(LogLevel.Info, $"Initiating update check...");
         try {
             var releases = await GitHubDownloader.GetAllReleasesAsync(OWNER, REPO);
@@ -49,8 +48,7 @@ public static class AutoUpdater {
         }
     }
 
-    private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) {
-        using var perf = PerformanceLogger.Log();
+    private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) { 	
         Directory.CreateDirectory(UpdateDirectory);
 
         var assetUrl = release.Assets[0].BrowserDownloadUrl;
@@ -96,8 +94,7 @@ public static class AutoUpdater {
         }
     }
 
-    private static string CreateUpdateScript(string updatePath) {
-        using var perf = PerformanceLogger.Log();
+    private static string CreateUpdateScript(string updatePath) { 	
         var scriptPath = Path.Combine(UpdateDirectory, "update.bat");
         var currentExe = Environment.ProcessPath;
 

@@ -1,13 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using Mono.Cecil;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class PropertyCloner {
 	[SuppressMessage("ReSharper", "InvertIf")]
-	public static PropertyDefinition CloneProperty(PropertyDefinition src, ModuleDefinition targetModule, TypeDefinition type) {
-		using var perf = PerformanceLogger.Log();
+	public static PropertyDefinition CloneProperty(PropertyDefinition src, ModuleDefinition targetModule, TypeDefinition type) { 	
 		PropertyDefinition newProperty = new (src.Name, src.Attributes, targetModule.ImportReference(src.PropertyType));
 
 		AttributesCloner.CloneAttributes(src, newProperty, targetModule);

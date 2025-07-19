@@ -2,7 +2,6 @@ using System.Diagnostics;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
-using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.WindowsFormsExtensions;
 
@@ -20,9 +19,7 @@ public class ModsTab : BaseTab {
 
     public event Action? ModsChanged;
 
-    public ModsTab(TabPage page) : base(page) {
-        using var perf = PerformanceLogger.Log();
-
+    public ModsTab(TabPage page) : base(page) { 	
         InitializeComponents();
         InitializeEvents();
 
@@ -36,8 +33,7 @@ public class ModsTab : BaseTab {
         UpdateUiState();
     }
 
-    public bool HasFileConflicts() {
-        using var perf = PerformanceLogger.Log();
+    public bool HasFileConflicts() { 	
         var allMods = ModManager.Mods.ToList();
         return allMods.Any(mod => {
             var display = ConflictManager.GetConflictDisplay(mod, allMods);
@@ -45,14 +41,12 @@ public class ModsTab : BaseTab {
         });
     }
 
-    private void OnSettingChanged() {
-        using var perf = PerformanceLogger.Log();
+    private void OnSettingChanged() { 	
         if (_modListView?.InvokeRequired != true) return;
         _modListView.Invoke(OnSettingChanged);
     }
 
-    private void OnModsLoaded() {
-        using var perf = PerformanceLogger.Log();
+    private void OnModsLoaded() { 	
         if (_modListView!.InvokeRequired) {
             _modListView.Invoke(RefreshModList);
         } else {
@@ -60,8 +54,7 @@ public class ModsTab : BaseTab {
         }
     }
 
-    private void UpdateUiState() {
-        using var perf = PerformanceLogger.Log();
+    private void UpdateUiState() { 	
         if (_mainContainer == null) return;
 
         var installPath = SettingsHolder.InstallPath;
@@ -82,8 +75,7 @@ public class ModsTab : BaseTab {
         RefreshModList();
     }
 
-    private void ShowMessage(string message, bool showButton) {
-        using var perf = PerformanceLogger.Log();
+    private void ShowMessage(string message, bool showButton) { 	
         if (_mainContainer == null || _messageContainer == null) return;
 
         _mainContainer.SuspendLayout();
@@ -96,8 +88,7 @@ public class ModsTab : BaseTab {
         _mainContainer.ResumeLayout();
     }
 
-    private void ShowModList() {
-        using var perf = PerformanceLogger.Log();
+    private void ShowModList() { 	
         if (_mainContainer == null) return;
 
         _mainContainer.SuspendLayout();
@@ -121,8 +112,7 @@ public class ModsTab : BaseTab {
         _mainContainer.ResumeLayout();
     }
 
-    protected sealed override void InitializeComponents() {
-        using var perf = PerformanceLogger.Log();
+    protected sealed override void InitializeComponents() { 	
         _mainContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 1,
@@ -135,8 +125,7 @@ public class ModsTab : BaseTab {
         Tab.Controls.Add(_mainContainer);
     }
 
-    private void InitializeMessageContainer() {
-        using var perf = PerformanceLogger.Log();
+    private void InitializeMessageContainer() { 	
         _messageContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -172,8 +161,7 @@ public class ModsTab : BaseTab {
         _messageContainer.Controls.Add(buttonPanel, 0, 1);
     }
 
-    private void InitializeModListView() {
-        using var perf = PerformanceLogger.Log();
+    private void InitializeModListView() { 	
         ConflictManager.PrecomputeAllConflicts(ModManager.Mods);
         _modListView = new ListView {
             Dock = DockStyle.Fill,
@@ -205,8 +193,7 @@ public class ModsTab : BaseTab {
         };
     }
 
-    private TableLayoutPanel CreateDescriptionContainer() {
-        using var perf = PerformanceLogger.Log();
+    private TableLayoutPanel CreateDescriptionContainer() { 	
         var descriptionContainer = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             RowCount = 2,
@@ -281,8 +268,7 @@ public class ModsTab : BaseTab {
         return descriptionContainer;
     }
 
-    private void SetAllModsChecked(bool value) {
-        using var perf = PerformanceLogger.Log();
+    private void SetAllModsChecked(bool value) { 	
         if (_modListView == null || _isRefreshingUI) return;
 
         try {
@@ -304,8 +290,7 @@ public class ModsTab : BaseTab {
         }
     }
     
-    private void InitializeButton_Click(object? sender, EventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void InitializeButton_Click(object? sender, EventArgs e) { 	
         var installPath = SettingsHolder.InstallPath;
         if (string.IsNullOrEmpty(installPath)) return;
 
@@ -318,8 +303,7 @@ public class ModsTab : BaseTab {
         UpdateUiState();
     }
 
-    private ListViewItem CreateListViewItem(Mod mod) {
-        using var perf = PerformanceLogger.Log();
+    private ListViewItem CreateListViewItem(Mod mod) { 	
         var item = new ListViewItem {
             Text = mod.Info.Name,
             Checked = mod.IsEnabled,
@@ -338,8 +322,7 @@ public class ModsTab : BaseTab {
         return item;
     }
     
-    private void ModListView_ItemChecked(object? sender, ItemCheckedEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void ModListView_ItemChecked(object? sender, ItemCheckedEventArgs e) { 	
         if (_suppressEvents || e.Item.Tag is not Mod mod || _modListView == null) return;
 
         if (Environment.StackTrace.Contains("CreateControl"))
@@ -351,8 +334,7 @@ public class ModsTab : BaseTab {
         ModsChanged?.Invoke();
     }
 
-    private void RefreshItem(ListViewItem item) {
-        using var perf = PerformanceLogger.Log();
+    private void RefreshItem(ListViewItem item) { 	
         if (_modListView == null || item.Tag is not Mod mod) return;
 
         var conflict = ConflictManager.GetConflictDisplay(mod, ModManager.Mods);
@@ -372,8 +354,7 @@ public class ModsTab : BaseTab {
         }
     }
 
-    private void RefreshModList() {
-        using var perf = PerformanceLogger.Log();
+    private void RefreshModList() { 	
         if (_modListView == null) return;
 
         var currentItems = ModManager.Mods.Select(CreateListViewItem).ToArray();
@@ -384,8 +365,7 @@ public class ModsTab : BaseTab {
         _modListView.EndUpdate();
     }
     
-    private void InitializeEvents() {
-        using var perf = PerformanceLogger.Log();
+    private void InitializeEvents() { 	
         _modListView!.ItemDrag += ModListView_ItemDrag;
         _modListView!.DragOver += ModListView_DragOver;
         _modListView!.DragDrop += ModListView_DragDrop;
@@ -394,8 +374,7 @@ public class ModsTab : BaseTab {
         _modListView!.MouseClick += ModListView_MouseClick;
     }
 
-    private void ModListView_SelectedIndexChanged(object? sender, EventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void ModListView_SelectedIndexChanged(object? sender, EventArgs e) { 	
         if (_modListView!.SelectedItems.Count == 0) {
             _descriptionBox!.Text = string.Empty;
             _descriptionBox!.ForeColor = Color.Gray;
@@ -411,8 +390,7 @@ public class ModsTab : BaseTab {
         _descriptionBox!.ForeColor = SystemColors.WindowText;
     }
 
-    private void ModListView_MouseClick(object? sender, MouseEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void ModListView_MouseClick(object? sender, MouseEventArgs e) { 	
         if (e.Button != MouseButtons.Right) return;
 
         var focusedItem = _modListView!.FocusedItem;
@@ -447,8 +425,7 @@ public class ModsTab : BaseTab {
         e.Effect = DragDropEffects.Move;
     }
 
-    private void ModListView_DragDrop(object? sender, DragEventArgs e) {
-        using var perf = PerformanceLogger.Log();
+    private void ModListView_DragDrop(object? sender, DragEventArgs e) { 	
         var targetPoint = _modListView!.PointToClient(new Point(e.X, e.Y));
         var targetItem = _modListView!.GetItemAt(targetPoint.X, targetPoint.Y);
         var draggedItem = (ListViewItem?)e.Data?.GetData(typeof(ListViewItem));

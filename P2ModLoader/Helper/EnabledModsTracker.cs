@@ -11,8 +11,7 @@ public static class EnabledModsTracker {
     
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
     
-    public static void SaveEnabledMods(IEnumerable<Mod> mods) {
-        using var perf = PerformanceLogger.Log();
+    public static void SaveEnabledMods(IEnumerable<Mod> mods) { 	
         if (EnabledModsPath == null) return;
         
         try {
@@ -24,8 +23,7 @@ public static class EnabledModsTracker {
         }
     }
     
-    public static void ClearEnabledMods() {
-        using var perf = PerformanceLogger.Log();
+    public static void ClearEnabledMods() { 	
         if (EnabledModsPath == null) return;
         
         try {

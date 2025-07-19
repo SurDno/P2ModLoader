@@ -7,8 +7,7 @@ using UsingList = Microsoft.CodeAnalysis.SyntaxList<Microsoft.CodeAnalysis.CShar
 namespace P2ModLoader.Patching.Assembly;
 
 public static class ReferenceCollector {
-	public static List<MetadataReference> CollectReferences(string dllDirectory, string dllPath) {
-		using var perf = PerformanceLogger.Log();
+	public static List<MetadataReference> CollectReferences(string dllDirectory, string dllPath) { 	
 		var references = new List<MetadataReference>();
 
 		foreach (var file in Directory.GetFiles(dllDirectory, "*.dll")) {
@@ -24,18 +23,15 @@ public static class ReferenceCollector {
 		return references;
 	}
 
-	public static UsingList CollectAllUsings(SyntaxNode root) {
-		using var perf = PerformanceLogger.Log();
+	public static UsingList CollectAllUsings(SyntaxNode root) { 	
 		return SyntaxFactory.List(root.DescendantNodes().OfType<UsingDirectiveSyntax>().ToList());
 	}
 
-	public static UsingList MergeUsings(SyntaxNode originalNode, SyntaxNode updatedNode) {
-		using var perf = PerformanceLogger.Log();
+	public static UsingList MergeUsings(SyntaxNode originalNode, SyntaxNode updatedNode) { 	
 		return MergeUsings(CollectAllUsings(originalNode), CollectAllUsings(updatedNode));
 	}
 
-	private static UsingList MergeUsings(UsingList originalUsings, UsingList updatedUsings) {
-		using var perf = PerformanceLogger.Log();
+	private static UsingList MergeUsings(UsingList originalUsings, UsingList updatedUsings) { 	
 		var allUsings = originalUsings
 			.Concat(updatedUsings)
 			.GroupBy(u => u.ToString().Trim())

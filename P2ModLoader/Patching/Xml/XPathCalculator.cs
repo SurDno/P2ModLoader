@@ -1,13 +1,11 @@
 using System.Xml.Linq;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Xml;
 
 public static class XPathCalculator {
     private static readonly Dictionary<XElement, string> XPathCache = new(), IdCache = new();
     
-    public static string GetXPathWithIndex(XElement element) {
-        using var perf = PerformanceLogger.Log();
+    public static string GetXPathWithIndex(XElement element) { 	
         if (XPathCache.TryGetValue(element, out var cachedPath))
             return cachedPath;
         
@@ -15,8 +13,7 @@ public static class XPathCalculator {
         return XPathCache[element];
     }
 
-    private static string CalculateXPath(XElement element) {
-        using var perf = PerformanceLogger.Log();
+    private static string CalculateXPath(XElement element) { 	
         if (element.Parent == null)
             return "/" + element.Name.LocalName;
 
@@ -30,8 +27,7 @@ public static class XPathCalculator {
         return xpath + $"[{element.ElementsBeforeSelf(element.Name).Count() + 1}]";
     }
     
-    private static string? GetCachedIdentifier(XElement element) {
-        using var perf = PerformanceLogger.Log();
+    private static string? GetCachedIdentifier(XElement element) { 	
         if (IdCache.TryGetValue(element, out var cachedId))
             return cachedId;
             
@@ -43,8 +39,7 @@ public static class XPathCalculator {
         return identifier;
     }
 
-    public static void ClearCache() {
-        using var perf = PerformanceLogger.Log();
+    public static void ClearCache() { 	
         XPathCache.Clear();
         IdCache.Clear();
     }

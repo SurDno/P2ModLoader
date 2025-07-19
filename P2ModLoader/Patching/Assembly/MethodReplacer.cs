@@ -1,15 +1,13 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly;
 
 public class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharpSyntaxRewriter {
 	private bool _addedNewMethods;
 
-	public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) {
-		using var perf = PerformanceLogger.Log();
+	public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node) { 	
 		foreach (var replacement in methodReplacements.Where(r => node.Identifier.Text == r.Name)) {
 			var nodeParameterTypes = node.ParameterList.Parameters.Select(p => p.Type.ToString()).ToList();
 
@@ -23,8 +21,7 @@ public class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharp
 		return node;
 	}
 
-	public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node) {
-		using var perf = PerformanceLogger.Log();
+	public override SyntaxNode VisitClassDeclaration(ClassDeclarationSyntax node) { 	
 		var updatedNode = (ClassDeclarationSyntax)base.VisitClassDeclaration(node)!;
 		if (_addedNewMethods) return updatedNode;
         

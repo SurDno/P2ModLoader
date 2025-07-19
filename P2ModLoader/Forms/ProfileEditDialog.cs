@@ -1,5 +1,3 @@
-using P2ModLoader.Logging;
-
 namespace P2ModLoader.Forms;
 
 public sealed class ProfileEditDialog : Form {
@@ -8,8 +6,7 @@ public sealed class ProfileEditDialog : Form {
 	private const byte BACKSPACE = 8;
 	public string? UniqueName { get; private set; }
 
-	public ProfileEditDialog(string prefix, string currentUniqueName) {
-		using var perf = PerformanceLogger.Log();
+	public ProfileEditDialog(string prefix, string currentUniqueName) { 	
 		Text = "Edit Profile Name";
 		FormBorderStyle = FormBorderStyle.FixedDialog;
 		MaximizeBox = false;
@@ -57,8 +54,7 @@ public sealed class ProfileEditDialog : Form {
 		Controls.AddRange([prefixLabel, _numberTextBox, okButton, cancelButton]);
 	}
 
-	protected override void OnFormClosing(FormClosingEventArgs e) {
-		using var perf = PerformanceLogger.Log();
+	protected override void OnFormClosing(FormClosingEventArgs e) { 	
 		if (DialogResult == DialogResult.OK) 
 			UniqueName = _numberTextBox.Text;
 		

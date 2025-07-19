@@ -15,8 +15,7 @@ public static class GamePatcher {
     private const string DATA_PATH = "Data/";
     private static ProgressForm? _progressForm;
 
-    public static bool TryPatch() {
-        using var perf = PerformanceLogger.Log();
+    public static bool TryPatch() { 	
         using var form = _progressForm = new ProgressForm();
         try {
             _progressForm.Show();
@@ -38,8 +37,7 @@ public static class GamePatcher {
         }
     }
 
-    private static bool TryProcessMods(List<Mod> enabledMods) {
-        using var perf = PerformanceLogger.Log();
+    private static bool TryProcessMods(List<Mod> enabledMods) { 	
         for (var index = 0; index < enabledMods.Count; index++) {
             var mod = enabledMods[index];
             Logger.Log(LogLevel.Info, $"Processing mod {mod.Info.Name}");
@@ -57,8 +55,7 @@ public static class GamePatcher {
         return true;
     }
 
-    private static bool TryProcessAssemblies(string modAssemblyPath, Mod mod) {
-        using var perf = PerformanceLogger.Log();
+    private static bool TryProcessAssemblies(string modAssemblyPath, Mod mod) { 	
         foreach (var source in Directory.GetFileSystemEntries(modAssemblyPath)) {
             var name = Path.GetFileName(source);
             var target = Path.Combine(SettingsHolder.InstallPath!, MANAGED_PATH, name);
@@ -81,8 +78,7 @@ public static class GamePatcher {
         return true;
     }
     
-    private static bool PatchAssemblyWithCodeFiles(string directory, string assemblyPath, Mod mod) {
-        using var perf = PerformanceLogger.Log();
+    private static bool PatchAssemblyWithCodeFiles(string directory, string assemblyPath, Mod mod) { 	
         var codeFiles = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories).ToList();
         var loadFirstFiles = mod.Info.LoadFirst.Select(f => Path.Combine(directory, f)).Where(File.Exists).ToList();
         codeFiles = loadFirstFiles.Concat(codeFiles.Except(loadFirstFiles)).ToList();
@@ -96,8 +92,7 @@ public static class GamePatcher {
         return true;
     }
 
-    private static bool ProcessAssets(string modAssetsPath, Mod mod) {
-        using var perf = PerformanceLogger.Log();
+    private static bool ProcessAssets(string modAssetsPath, Mod mod) { 	
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
             if (directory.EndsWith(MANAGED_PATH.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)) continue;
 
@@ -116,8 +111,7 @@ public static class GamePatcher {
         return true;
     }
 
-    private static bool ProcessXmlData(string modDataPath, Mod mod) {
-        using var perf = PerformanceLogger.Log();
+    private static bool ProcessXmlData(string modDataPath, Mod mod) { 	
         var xmlFiles = Directory.GetFiles(modDataPath, "*.*", SearchOption.AllDirectories)
             .Where(f => f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase) || 
                         f.EndsWith(".xml.gz", StringComparison.OrdinalIgnoreCase));

@@ -1,6 +1,5 @@
 using System.Xml;
 using System.Xml.Linq;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Saves;
 
@@ -9,14 +8,12 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
 
     public int CurrentProfileIndex {
         get {
-            using var perf = PerformanceLogger.Log();
             var indexStr = _profilesDoc?.Root?.Element("CurrentIndex")?.Value;
             return int.TryParse(indexStr, out var index) ? index : -1;
         }
     }
 
-    public void LoadProfiles() {
-        using var perf = PerformanceLogger.Log();
+    public void LoadProfiles() { 	
         if (!File.Exists(profilesPath)) return;
 
         try {
@@ -28,13 +25,11 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
         }
     }
 
-    public IEnumerable<(XElement Profile, int Index)> GetProfiles() {
-        using var perf = PerformanceLogger.Log();
+    public IEnumerable<(XElement Profile, int Index)> GetProfiles() { 	
         return _profilesDoc!.Root!.Elements("Profiles").First().Elements("Item").Select((p, i) => (p, i));
     }
 
-    public void DeleteProfile(XElement profileElement) {
-        using var perf = PerformanceLogger.Log();
+    public void DeleteProfile(XElement profileElement) { 	
         var profileName = profileElement.Element("Name")?.Value;
         if (profileName == null) return;
 
@@ -55,8 +50,7 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
             Directory.Delete(profilePath, true);
     }
 
-    private void SaveXmlDocument() {
-        using var perf = PerformanceLogger.Log();
+    private void SaveXmlDocument() { 	
         if (_profilesDoc == null) return;
 
         var xmlSettings = new XmlWriterSettings {
@@ -70,8 +64,7 @@ public class ProfileManager(string savesDirectory, string profilesPath) {
         _profilesDoc.Save(writer);
     }
 
-    public void RenameProfile(XElement profileElement, string newFullName) {
-        using var perf = PerformanceLogger.Log();
+    public void RenameProfile(XElement profileElement, string newFullName) { 	
         var oldName = profileElement.Element("Name")?.Value;
         if (string.IsNullOrEmpty(oldName))
             throw new InvalidOperationException("Profile name not found");

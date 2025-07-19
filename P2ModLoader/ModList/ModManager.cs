@@ -1,6 +1,5 @@
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
@@ -10,8 +9,7 @@ public static class ModManager {
     
     public static event Action? ModsLoaded;
 
-    static ModManager() {
-        using var perf = PerformanceLogger.Log();
+    static ModManager() { 	
         SettingsHolder.InstallPathChanged += OnInstallPathChanged;
         
         if (SettingsHolder.InstallPath != null)
@@ -29,8 +27,7 @@ public static class ModManager {
         ModsLoaded?.Invoke();
     }
 
-    private static void ScanForMods() {
-        using var perf = PerformanceLogger.Log();
+    private static void ScanForMods() { 	
         _mods.Clear();
         var installPath = SettingsHolder.InstallPath;
 
@@ -61,8 +58,7 @@ public static class ModManager {
         _mods.Sort((a, b) => a.LoadOrder.CompareTo(b.LoadOrder));
     }
 
-    public static void UpdateModOrder(int oldIndex, int newIndex) {
-        using var perf = PerformanceLogger.Log();
+    public static void UpdateModOrder(int oldIndex, int newIndex) { 	
         if (oldIndex < 0 || oldIndex >= _mods.Count || newIndex < 0 || newIndex >= _mods.Count)
             return;
 

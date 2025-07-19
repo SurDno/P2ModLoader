@@ -1,12 +1,10 @@
 using System.Xml.Linq;
 using P2ModLoader.Data;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Saves;
 
 public class SavesTreeViewBuilder(string savesDirectory, ProfileManager profileManager) {
-    public TreeNode CreateProfileNode(XElement profile, int profileIndex) {
-        using var perf = PerformanceLogger.Log();
+    public TreeNode CreateProfileNode(XElement profile, int profileIndex) { 	
         var name = profile.Element("Name")?.Value ?? "Unknown Profile";
         var lastSave = profile.Element("LastSave")?.Value;
 
@@ -21,8 +19,7 @@ public class SavesTreeViewBuilder(string savesDirectory, ProfileManager profileM
         return profileNode;
     }
 
-    private void AddDataItems(TreeNode profileNode, XElement profile) {
-        using var perf = PerformanceLogger.Log();
+    private void AddDataItems(TreeNode profileNode, XElement profile) { 	
         var dataElement = profile.Element("Data");
         if (dataElement?.HasElements != true) return;
 
@@ -36,8 +33,7 @@ public class SavesTreeViewBuilder(string savesDirectory, ProfileManager profileM
         profileNode.Nodes.Add(dataNode);
     }
 
-    private void AddSaveFiles(TreeNode profileNode, string profileName, string? lastSave) {
-        using var perf = PerformanceLogger.Log();
+    private void AddSaveFiles(TreeNode profileNode, string profileName, string? lastSave) { 	
         var profileDirectory = Path.Combine(savesDirectory, profileName);
         if (!Directory.Exists(profileDirectory)) return;
 

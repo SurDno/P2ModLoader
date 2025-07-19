@@ -1,14 +1,12 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class InstructionCloner {
     public static Instruction CloneInstruction(Instruction src, ModuleDefinition targetModule,
         Map<VariableDefinition> variableMap, Map<ParameterDefinition> parameterMap, Map<Instruction> instructionMap,
-        IGenericParameterProvider contextProvider, TypeDefinition currentType) {
-        using var perf = PerformanceLogger.Log();
+        IGenericParameterProvider contextProvider, TypeDefinition currentType) { 	
         var opcode = src.OpCode;
         var operand = src.Operand;
 

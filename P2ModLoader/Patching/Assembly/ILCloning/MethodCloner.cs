@@ -1,13 +1,11 @@
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class MethodCloner {
 
-    public static MethodDefinition CloneMethod(MethodDefinition src, ModuleDefinition targetModule) {
-        using var perf = PerformanceLogger.Log();
+    public static MethodDefinition CloneMethod(MethodDefinition src, ModuleDefinition targetModule) { 	
         MethodDefinition newMethod = new (src.Name, src.Attributes, targetModule.ImportReference(src.ReturnType));
         AttributesCloner.CloneAttributes(src, newMethod, targetModule);
         foreach (var newGp in src.GenericParameters.Select(gp => new GenericParameter(gp.Name, newMethod))) {
@@ -24,8 +22,7 @@ public static class MethodCloner {
     }
 
     public static void ReplaceMethodBody(MethodDefinition originalMethod, MethodDefinition newMethod,
-        ModuleDefinition targetModule) {
-        using var perf = PerformanceLogger.Log();
+        ModuleDefinition targetModule) { 	
         originalMethod.Body = new(originalMethod);
         originalMethod.Attributes = newMethod.Attributes;
         CopyMethodBody(newMethod.Body, originalMethod.Body, targetModule, newMethod, originalMethod.DeclaringType);

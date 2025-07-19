@@ -1,5 +1,4 @@
 using P2ModLoader.Data;
-using P2ModLoader.Logging;
 using P2ModLoader.Update;
 
 namespace P2ModLoader.ModList;
@@ -11,13 +10,11 @@ public static class DependencyManager {
         public Color DisplayColor { get; init; } = Color.White;
     }
 
-    private static string Normalize(string path) {
-        using var perf = PerformanceLogger.Log();
+    private static string Normalize(string path) { 	
         return new DirectoryInfo(path.TrimEnd('/', '\\')).Name.ToLowerInvariant();
     }
 
-    public static DependencyValidation ValidateDependencies(Mod mod, IEnumerable<Mod> allMods) {
-        using var perf = PerformanceLogger.Log();
+    public static DependencyValidation ValidateDependencies(Mod mod, IEnumerable<Mod> allMods) { 	
         if (!mod.IsEnabled) {
             return new DependencyValidation();
         }
@@ -87,8 +84,7 @@ public static class DependencyManager {
         return new DependencyValidation();
     }
 
-    public static bool HasDependencyErrors(IEnumerable<Mod> mods) {
-        using var perf = PerformanceLogger.Log();
+    public static bool HasDependencyErrors(IEnumerable<Mod> mods) { 	
         return mods.Where(m => m.IsEnabled).Any(mod => ValidateDependencies(mod, mods).HasErrors);
     }
 }

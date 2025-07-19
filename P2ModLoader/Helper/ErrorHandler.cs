@@ -4,8 +4,7 @@ namespace P2ModLoader.Helper;
 
 public static class ErrorHandler {
 	
-	public static void Handle(string msg, Exception? e, bool skipLogging = false) {
-		using var perf = PerformanceLogger.Log();
+	public static void Handle(string msg, Exception? e, bool skipLogging = false) { 	
 		var message = e != null ? ": " + e.Message : string.Empty;
 		var stackTrace = e != null ? e.StackTrace + "\n\n" : string.Empty;
 		

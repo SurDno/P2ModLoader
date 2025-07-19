@@ -1,13 +1,11 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using P2ModLoader.Logging;
 using static P2ModLoader.Update.VersionComparison;
 
 namespace P2ModLoader.Update;
 
 public static partial class PatchnoteBuilder {
-	public static string GetCumulativeReleaseNotes(List<GitHubRelease> releases) {
-		using var perf = PerformanceLogger.Log();
+	public static string GetCumulativeReleaseNotes(List<GitHubRelease> releases) { 	
 
 		var notes = new StringBuilder();
 		foreach (var release in releases.Where(r => IsLoaderNewer(r.TagName)).OrderBy(r => Version.Parse(r.TagName))) {

@@ -1,13 +1,11 @@
 using System.Reflection;
-using P2ModLoader.Logging;
 
 namespace P2ModLoader.Update;
 
 public static class VersionComparison {
 	public static readonly string CurrentLoaderVersion;
 
-	static VersionComparison() {
-		using var perf = PerformanceLogger.Log();
+	static VersionComparison() { 	
 		var versionInfo = Assembly.GetExecutingAssembly().GetName().Version!;
 		CurrentLoaderVersion = $"{versionInfo.Major}.{versionInfo.Minor}.{versionInfo.Build}";
 	}

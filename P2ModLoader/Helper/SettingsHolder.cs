@@ -22,8 +22,7 @@ public static class SettingsHolder {
 
 	public static string? InstallPath {
 		get => _installPath;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			var isValid = value != null && File.Exists(Path.Combine(value, "Pathologic.exe"));
         
 			if (_installPath == value) return;
@@ -36,8 +35,7 @@ public static class SettingsHolder {
 
 	public static bool AllowStartupWithConflicts {
 		get => _allowStartupWithConflicts;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			_allowStartupWithConflicts = value;
 			StartupWithConflictsChanged?.Invoke();
 			Logger.Log(LogLevel.Info, $"Setting {nameof(AllowStartupWithConflicts)} changed to: {value}");
@@ -46,8 +44,7 @@ public static class SettingsHolder {
 
 	public static bool IsPatched {
 		get => _isPatched;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			if (_isPatched == value) return;
 			_isPatched = value;
 			PatchStatusChanged?.Invoke();
@@ -57,8 +54,7 @@ public static class SettingsHolder {
 
 	public static bool CheckForUpdatesOnStartup {
 		get => _checkForUpdatesOnStartup;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			if (_checkForUpdatesOnStartup == value) return;
 			_checkForUpdatesOnStartup = value;
 			CheckForUpdatesOnStartupChanged?.Invoke();
@@ -68,16 +64,14 @@ public static class SettingsHolder {
 
 	public static IReadOnlyList<SavedModState> LastKnownModState {
 		get => _lastKnownModState.AsReadOnly();
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			_lastKnownModState = value.ToList();
 			ModStateChanged?.Invoke();
 			Logger.Log(LogLevel.Info, $"Setting {nameof(LastKnownModState)} changed to: {value}");
 		}
 	}
 
-	public static void UpdateModState(IEnumerable<Mod> mods) {
-		using var perf = PerformanceLogger.Log();
+	public static void UpdateModState(IEnumerable<Mod> mods) { 	
 		_lastKnownModState = mods.Select(mod => new SavedModState(
 			mod.FolderName,
 			mod.IsEnabled,
@@ -88,8 +82,7 @@ public static class SettingsHolder {
 
 	public static Size WindowSize {
 		get => _windowSize;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			if (_windowSize == value) return;
 			_windowSize = value;
 			WindowSizeChanged?.Invoke();
@@ -99,8 +92,7 @@ public static class SettingsHolder {
 	
 	public static LogLevel LogLevel {
 		get => _logLevel;
-		set {
-			using var perf = PerformanceLogger.Log();
+		set { 	
 			if (_logLevel == value) return;
 			_logLevel = value;
 			LogLevelChanged?.Invoke();
