@@ -19,23 +19,16 @@ public static class TypeCloner {
         foreach (var gp in src.GenericParameters)
             newType.GenericParameters.Add(new(gp.Name, newType));
 
-        foreach (var method in src.Methods)
+        // TODO: separate constructor cloning logic?
+        foreach (var method in src.Methods.Where(m => m is { IsSetter: false, IsGetter: false }))
             newType.Methods.Add(MethodCloner.CloneMethod(method, targetModule));
 
+        // TODO: not copy backing fields? 
         foreach (var field in src.Fields)
             newType.Fields.Add(FieldCloner.CloneField(field, targetModule));
 
-        foreach (var property in src.Properties) {
-            PropertyDefinition newProperty = new(property.Name, property.Attributes,
-                targetModule.ImportReference(property.PropertyType));
-
-            if (property.GetMethod != null)
-                newProperty.GetMethod = newType.Methods.FirstOrDefault(m => m.Name == property.GetMethod.Name);
-            if (property.SetMethod != null)
-                newProperty.SetMethod = newType.Methods.FirstOrDefault(m => m.Name == property.SetMethod.Name);
-
-            newType.Properties.Add(newProperty);
-        }
+        foreach (var property in src.Properties) 
+            newType.Properties.Add(PropertyCloner.CloneProperty(property, targetModule, newType));
 
         foreach (var eventDef in src.Events) {
             var newEvent = new EventDefinition(
