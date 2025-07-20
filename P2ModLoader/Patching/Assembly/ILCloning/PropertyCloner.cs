@@ -4,8 +4,7 @@ using P2ModLoader.Logging;
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
 public static class PropertyCloner {
-    public static PropertyDefinition
-        CloneProperty(PropertyDefinition src, ModuleDefinition module, TypeDefinition type) {
+    public static PropertyDefinition CloneProperty(PropertyDefinition src, ModuleDefinition module, TypeDefinition type) {
         PropertyDefinition newProperty = new(src.Name, src.Attributes, module.ImportReference(src.PropertyType));
         AttributesCloner.CloneAttributes(src, newProperty, module);
         if (src.GetMethod != null) {

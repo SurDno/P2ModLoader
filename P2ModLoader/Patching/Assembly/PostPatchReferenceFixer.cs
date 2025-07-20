@@ -11,14 +11,12 @@ public static class PostPatchReferenceFixer {
             Logger.Log(LogLevel.Debug, $"Removed assembly reference '{tempAsm}' from module");
         }
 
-        foreach (var field in type.Fields) {
-            if (field.FieldType.Scope?.Name != tempAsm || field.FieldType.FullName != type.FullName) continue;
+        foreach (var field in type.Fields.Where(f => f.FieldType.Scope?.Name == tempAsm && f.FieldType.FullName == type.FullName)) {
             field.FieldType = module.ImportReference(type);
             Logger.Log(LogLevel.Debug, $"Fixed field type reference for '{field.Name}'");
         }
 
-        foreach (var prop in type.Properties) {
-            if (prop.PropertyType.Scope?.Name != tempAsm || prop.PropertyType.FullName != type.FullName) continue;
+        foreach (var prop in type.Properties.Where(p => p.PropertyType.Scope?.Name == tempAsm && p.PropertyType.FullName == type.FullName)) {
             prop.PropertyType = module.ImportReference(type);
             Logger.Log(LogLevel.Debug, $"Fixed property type reference for '{prop.Name}'");
         }
@@ -29,8 +27,7 @@ public static class PostPatchReferenceFixer {
                 Logger.Log(LogLevel.Debug, $"Fixed return type for method '{method.Name}'");
             }
 
-            foreach (var param in method.Parameters) {
-                if (param.ParameterType.Scope?.Name != tempAsm || param.ParameterType.FullName != type.FullName) continue;
+            foreach (var param in method.Parameters.Where(p => p.ParameterType.Scope?.Name == tempAsm && p.ParameterType.FullName == type.FullName)) {
                 param.ParameterType = module.ImportReference(type);
                 Logger.Log(LogLevel.Debug, $"Fixed parameter '{param.Name}' in method '{method.Name}'");
             }

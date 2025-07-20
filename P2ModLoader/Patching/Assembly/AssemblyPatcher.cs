@@ -25,40 +25,39 @@ public static class AssemblyPatcher {
             var references = ReferenceCollector.CollectReferences(dllDirectory!, dllPath);
 
             var updatedSource = File.ReadAllText(updatedSourcePath);
-            var updatedTree = CSharpSyntaxTree.ParseText(updatedSource, new CSharpParseOptions(LanguageVersion.Latest));
+            var modTree = CSharpSyntaxTree.ParseText(updatedSource, new CSharpParseOptions(LanguageVersion.Latest));
 
-            var updatedRoot = updatedTree.GetRoot();
-            var classDeclarations = updatedRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
-            var enumDeclarations = updatedRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
-            var interfaceDeclarations = updatedRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
+            var modRoot = modTree.GetRoot();
+            var classes = modRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
+            var enums = modRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
+            var interfaces = modRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
             
-            var @namespace = updatedRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+            var @namespace = modRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
             var namespaceName = @namespace?.Name.ToString() ?? string.Empty;
             
-            var hasClass = classDeclarations.Count != 0;
-            var hasEnum = enumDeclarations.Count != 0;
-            var hasInterface = interfaceDeclarations.Count != 0;
+            var hasClass = classes.Count != 0;
+            var hasEnum = enums.Count != 0;
+            var hasInterface = interfaces.Count != 0;
 
             if (!hasClass && !hasEnum && !hasInterface) {
                 ErrorHandler.Handle($"No classes, enums or interfaces found in the source file {updatedSourcePath}", null);
                 return false;
             }
 
-            if (classDeclarations.Concat<MemberDeclarationSyntax>(enumDeclarations).Concat(interfaceDeclarations).Count() > 1) {
+            if (classes.Concat<MemberDeclarationSyntax>(enums).Concat(interfaces).Count() > 1) {
                 ErrorHandler.Handle($"The file {updatedSourcePath} contains multiple member definitions.", null);
                 return false;
             }
             
-            var methods = updatedRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
-            var properties = updatedRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
-            var fields = updatedRoot.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
-            var members = methods.Concat<MemberDeclarationSyntax>(properties).Concat(fields).ToList();
+            var methods = modRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+            var properties = modRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
+            var fields = modRoot.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
+            var events = modRoot.DescendantNodes().OfType<EventDeclarationSyntax>().ToList();
+            var eventFields = modRoot.DescendantNodes().OfType<EventFieldDeclarationSyntax>().ToList();
 
-            var decompiler = new CSharpDecompiler(dllPath, new DecompilerSettings {
-                ShowXmlDocumentation = false,
-                RemoveDeadCode = false,
-                RemoveDeadStores = false
-            });
+            var members = methods.Concat<MemberDeclarationSyntax>(properties).Concat(fields).Concat(events).Concat(eventFields).ToList();
+
+            var decompiler = new CSharpDecompiler(dllPath, new DecompilerSettings { ShowXmlDocumentation = false });
 
             var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(dllDirectory);
@@ -70,7 +69,7 @@ public static class AssemblyPatcher {
             using var originalAssembly = AssemblyDefinition.ReadAssembly(backupPath, readerParams);
 
             if (hasEnum) {
-                var enumDecl = enumDeclarations.First();
+                var enumDecl = enums.First();
                 var fullTypeName = string.IsNullOrEmpty(namespaceName)
                     ? enumDecl.Identifier.Text
                     : $"{namespaceName}.{enumDecl.Identifier.Text}";
@@ -90,7 +89,7 @@ public static class AssemblyPatcher {
             }
 
             if (hasInterface) {
-                var interfaceDecl  = interfaceDeclarations.First();
+                var interfaceDecl  = interfaces.First();
                 var fullTypeName = string.IsNullOrEmpty(namespaceName) ? interfaceDecl.Identifier.Text
                     : $"{namespaceName}.{interfaceDecl.Identifier.Text}";
 
@@ -105,7 +104,7 @@ public static class AssemblyPatcher {
             }
             
             if (hasClass) {
-                var classDecl = classDeclarations.First();
+                var classDecl = classes.First();
 
                 var baseName = classDecl.Identifier.Text;
                 var arity = classDecl.TypeParameterList?.Parameters.Count ?? 0;
@@ -120,9 +119,18 @@ public static class AssemblyPatcher {
                         return false;
                 } else {
                     if (members.Count != 0) {
+                         	
+                        string decompiledSource;
+                        try {
+                            decompiledSource = decompiler.DecompileTypeAsString(new FullTypeName(fullTypeName));
+                        } catch (Exception ex) {
+                            ErrorHandler.Handle($"Failed to decompile type {fullTypeName}", ex);
+                            return false;
+                        }
+                        
                         Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
-                        if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, @namespace,
-                                classDecl, methods, properties, fields, updatedRoot, references, readerParams))
+                        if (!TryUpdateClassTypeMembers(originalAssembly, fullTypeName, @namespace, classDecl, methods,
+                                properties, fields, events, eventFields, modRoot, references, readerParams, decompiledSource))
                             return false;
                     } else {
                         Logger.Log(LogLevel.Info, $"Class {fullTypeName} found but no members to add/replace.");
@@ -213,7 +221,6 @@ public static class AssemblyPatcher {
     }
 
     private static bool TryUpdateClassTypeMembers(
-        CSharpDecompiler decompiler,
         AssemblyDefinition originalAssembly,
         string fullTypeName,
         NamespaceDeclarationSyntax? @namespace,
@@ -221,16 +228,12 @@ public static class AssemblyPatcher {
         List<MethodDeclarationSyntax> methods,
         List<PropertyDeclarationSyntax> properties,
         List<FieldDeclarationSyntax> fields,
+        List<EventDeclarationSyntax> events,
+        List<EventFieldDeclarationSyntax> eventFields,
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
-        ReaderParameters readerParams) { 	
-        string decompiledSource;
-        try {
-            decompiledSource = decompiler.DecompileTypeAsString(new FullTypeName(fullTypeName));
-        } catch (Exception ex) {
-            ErrorHandler.Handle($"Failed to decompile type {fullTypeName}", ex);
-            return false;
-        }
+        ReaderParameters readerParams,
+        string decompiledSource) {
 
         var decompTree = CSharpSyntaxTree.ParseText(decompiledSource);
 
@@ -267,24 +270,35 @@ public static class AssemblyPatcher {
         }
 
         var methodRewriter = new MethodReplacer(methodReplacements);
-        var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass)
-                            ?? decompClass;
+        var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass) ?? decompClass;
 
-        var propertyReplacements = properties.Select(p => new PropertyReplacement(p.Identifier.Text, p)).ToList();
-        var propRewriter = new PropertyReplacer(propertyReplacements);
+        PropertyReplacer propRewriter = new(properties.Select(p => new PropertyReplacement(p.Identifier.Text, p)).ToList());
         modifiedClass = (ClassDeclarationSyntax)propRewriter.Visit(modifiedClass);
-        
+
         var existingPropNames = decompClass.Members.OfType<PropertyDeclarationSyntax>().Select(p => p.Identifier.Text).ToHashSet();
         var newProps = properties.Where(p => !existingPropNames.Contains(p.Identifier.Text)).ToArray();
 
         var existingFieldNames = decompClass.Members.OfType<FieldDeclarationSyntax>().SelectMany(f => f.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
         var newFields = fields.Where(f => f.Declaration.Variables.Any(v => !existingFieldNames.Contains(v.Identifier.Text))).ToArray();
 
+        EventReplacer evtRewriter = new(events.Select(e => new EventReplacement(e.Identifier.Text, e)).ToList());
+        modifiedClass = (ClassDeclarationSyntax)evtRewriter.Visit(modifiedClass);
+
+        var existingEventNames = decompClass.Members.OfType<EventDeclarationSyntax>().Select(e => e.Identifier.Text).ToHashSet();
+        var newEvents = events.Where(e => !existingEventNames.Contains(e.Identifier.Text)).ToArray();
+        
+        var existingFieldEventNames = decompClass.Members.OfType<EventFieldDeclarationSyntax>().SelectMany(e => e.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
+        var newFieldEvents = eventFields.Where(e => e.Declaration.Variables.Any(v => !existingFieldEventNames.Contains(v.Identifier.Text))).ToArray();
+        
         if (newProps.Length > 0)
             modifiedClass = modifiedClass.AddMembers(newProps);
         if (newFields.Length > 0)
             modifiedClass = modifiedClass.AddMembers(newFields);
-
+        if (newEvents.Length > 0)
+            modifiedClass = modifiedClass.AddMembers(newEvents);
+        if (newFieldEvents.Length > 0)
+            modifiedClass = modifiedClass.AddMembers(newFieldEvents);
+        
         CompilationUnitSyntax mergedRoot;
         if (@namespace != null) {
             var mergedNs = SyntaxFactory.NamespaceDeclaration(@namespace.Name)
@@ -350,10 +364,8 @@ public static class AssemblyPatcher {
             }
 
             if (originalMethod == null) {
-                Logger.Log(LogLevel.Info, $"Adding new method {methodName} to type {fullTypeName}");
-                var importedMethod = MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule);
-                originalType.Methods.Add(importedMethod);
-                Logger.Log(LogLevel.Info, $"Added new method {methodName}");
+                originalType.Methods.Add(MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule));
+                Logger.Log(LogLevel.Info, $"Added new method {methodName} to type {fullTypeName}");
             } else {
                 MethodCloner.ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
                 Logger.Log(LogLevel.Info, $"Replaced method {methodName} in type {fullTypeName}");
@@ -361,13 +373,11 @@ public static class AssemblyPatcher {
         }
 
 
-        foreach (var fieldDecl in fields) {
-            foreach (var variable in fieldDecl.Declaration.Variables) {
-                var fieldName = variable.Identifier.Text;
-                if (originalType.Fields.Any(f => f.Name == fieldName)) continue;
-                originalType.Fields.Add(FieldCloner.CloneField(newType.Fields.First(f => f.Name == fieldName), originalAssembly.MainModule));
-                Logger.Log(LogLevel.Info, $"Added new field {fieldName}");
-            }
+        foreach (var variable in fields.SelectMany(field => field.Declaration.Variables)) {
+            var fieldName = variable.Identifier.Text;
+            if (originalType.Fields.Any(f => f.Name == fieldName)) continue;
+            originalType.Fields.Add(FieldCloner.CloneField(newType.Fields.First(f => f.Name == fieldName), originalAssembly.MainModule));
+            Logger.Log(LogLevel.Info, $"Added new field {fieldName}");
         }
 
         foreach (var propDecl in properties) {
@@ -381,6 +391,36 @@ public static class AssemblyPatcher {
             } else {
                 originalType.Properties.Add(PropertyCloner.CloneProperty(newPropDef, originalAssembly.MainModule, originalType));
                 Logger.Log(LogLevel.Info, $"Added new property {propName}");
+            }
+        }
+
+        foreach (var @event in events) {
+            var name = @event.Identifier.Text;
+            var newEvent = newType.Events.First(e => e.Name == name);
+            var oldEvent = originalType.Events.FirstOrDefault(e => e.Name == name);
+
+            if (oldEvent != null) {
+                EventCloner.UpdateEvent(oldEvent, newEvent, originalAssembly.MainModule, originalType);
+                Logger.Log(LogLevel.Info, $"Updated event {name}");
+            } else {
+                var clone = EventCloner.CloneEvent(newEvent, originalAssembly.MainModule, originalType);
+                originalType.Events.Add(clone);
+                Logger.Log(LogLevel.Info, $"Added new event {name}");
+            }
+        }
+        
+        foreach (var fld in eventFields) {
+            var name = fld.Declaration.Variables.First().Identifier.Text;
+            var newEv = newType.Events.First(e => e.Name == name);
+            var oldEv = originalType.Events.FirstOrDefault(e => e.Name == name);
+
+            if (oldEv != null) {
+                EventCloner.UpdateEvent(oldEv, newEv, originalAssembly.MainModule, originalType);
+                Logger.Log(LogLevel.Info, $"Updated event {name}");
+            } else {
+                var clone = EventCloner.CloneEvent(newEv, originalAssembly.MainModule, originalType);
+                originalType.Events.Add(clone);
+                Logger.Log(LogLevel.Info, $"Added new event {name}");
             }
         }
 
