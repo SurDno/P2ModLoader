@@ -121,7 +121,7 @@ public static class AssemblyPatcher {
                     if (members.Count != 0) {
                         Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
                         if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, namespaceDecl,
-                                classDecl, methods, properties, updatedRoot, references, readerParams))
+                                classDecl, methods, properties, fields, updatedRoot, references, readerParams))
                             return false;
                     } else {
                         Logger.Log(LogLevel.Info, $"Class {fullTypeName} found but no members to add/replace.");
@@ -219,6 +219,7 @@ public static class AssemblyPatcher {
         ClassDeclarationSyntax classDecl,
         List<MethodDeclarationSyntax> methodGroup,
         List<PropertyDeclarationSyntax> propertyGroup,
+        List<FieldDeclarationSyntax> fieldGroup,
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
         ReaderParameters readerParams) { 	
@@ -265,19 +266,31 @@ public static class AssemblyPatcher {
         }
 
         var methodRewriter = new MethodReplacer(methodReplacements);
-        var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass);
+        var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass)
+                            ?? decompClass;
+
+        var existingPropNames = decompClass.Members.OfType<PropertyDeclarationSyntax>().Select(p => p.Identifier.Text).ToHashSet();
+        var newProps = propertyGroup.Where(p => !existingPropNames.Contains(p.Identifier.Text)).ToArray();
+
+        var existingFieldNames = decompClass.Members.OfType<FieldDeclarationSyntax>().SelectMany(f => f.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
+        var newFields = fieldGroup.Where(f => f.Declaration.Variables.Any(v => !existingFieldNames.Contains(v.Identifier.Text))).ToArray();
+
+        if (newProps.Length > 0)
+            modifiedClass = modifiedClass.AddMembers(newProps);
+        if (newFields.Length > 0)
+            modifiedClass = modifiedClass.AddMembers(newFields);
 
         CompilationUnitSyntax mergedRoot;
         if (namespaceDecl != null) {
-            var mergedNamespace = SyntaxFactory.NamespaceDeclaration(namespaceDecl.Name)
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass ?? decompClass));
+            var mergedNs = SyntaxFactory.NamespaceDeclaration(namespaceDecl.Name)
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass));
             mergedRoot = SyntaxFactory.CompilationUnit()
                 .WithUsings(ReferenceCollector.MergeUsings(decompRoot, updatedRoot))
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(mergedNamespace));
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(mergedNs));
         } else {
             mergedRoot = SyntaxFactory.CompilationUnit()
                 .WithUsings(ReferenceCollector.MergeUsings(decompRoot, updatedRoot))
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass ?? decompClass));
+                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass));
         }
 
         var mergedSource = mergedRoot.NormalizeWhitespace().ToFullString();
@@ -342,45 +355,30 @@ public static class AssemblyPatcher {
             }
         }
 
-        foreach (var propDecl in propertyGroup) {
-            var propName = propDecl.Identifier.Text;
 
-            var originalProp = originalType.Properties.FirstOrDefault(p => p.Name == propName);
-            var newProp     = newType.Properties.FirstOrDefault(p => p.Name == propName);
-
-            if (originalProp != null && newProp != null)
-            {
-                // Force the property type
-                originalProp.PropertyType = originalAssembly.MainModule.ImportReference(newProp.PropertyType);
-
-                // Clear old get method (if exists)
-                if (originalProp.GetMethod != null)
-                    originalType.Methods.Remove(originalProp.GetMethod);
-
-                // Clone & assign new get method
-                if (newProp.GetMethod != null)
-                {
-                    var clonedGet = MethodCloner.CloneMethod(newProp.GetMethod, originalAssembly.MainModule);
-                    originalType.Methods.Add(clonedGet);
-                    originalProp.GetMethod = clonedGet;
-                    Logger.Log(LogLevel.Info, $"Swapped in new get accessor of property {propName}");
-                }
-
-                // Clear old set method (if exists)
-                if (originalProp.SetMethod != null)
-                    originalType.Methods.Remove(originalProp.SetMethod);
-
-                // Clone & assign new set method
-                if (newProp.SetMethod != null)
-                {
-                    var clonedSet = MethodCloner.CloneMethod(newProp.SetMethod, originalAssembly.MainModule);
-                    originalType.Methods.Add(clonedSet);
-                    originalProp.SetMethod = clonedSet;
-                    Logger.Log(LogLevel.Info, $"Swapped in new set accessor of property {propName}");
-                }
+        foreach (var fieldDecl in fieldGroup) {
+            foreach (var variable in fieldDecl.Declaration.Variables) {
+                var fieldName = variable.Identifier.Text;
+                if (originalType.Fields.Any(f => f.Name == fieldName)) continue;
+                originalType.Fields.Add(FieldCloner.CloneField(newType.Fields.First(f => f.Name == fieldName), originalAssembly.MainModule));
+                Logger.Log(LogLevel.Info, $"Added new field {fieldName}");
             }
         }
-        
+
+        foreach (var propDecl in propertyGroup) {
+            var propName = propDecl.Identifier.Text;
+            var newPropDef = newType.Properties.First(p => p.Name == propName);
+            var existingPropDef = originalType.Properties.FirstOrDefault(p => p.Name == propName);
+
+            if (existingPropDef != null) {
+                PropertyCloner.UpdateProperty(existingPropDef, newPropDef, originalAssembly.MainModule, originalType);
+                Logger.Log(LogLevel.Info, $"Updated property {propName}");
+            } else {
+                originalType.Properties.Add(PropertyCloner.CloneProperty(newPropDef, originalAssembly.MainModule, originalType));
+                Logger.Log(LogLevel.Info, $"Added new property {propName}");
+            }
+        }
+
         PostPatchReferenceFixer.FixReferencesForPatchedType(originalType, tempAsmName, originalAssembly.MainModule);
         return true;
     }

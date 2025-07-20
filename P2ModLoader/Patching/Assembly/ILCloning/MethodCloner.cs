@@ -8,12 +8,10 @@ public static class MethodCloner {
     public static MethodDefinition CloneMethod(MethodDefinition src, ModuleDefinition targetModule) { 	
         MethodDefinition newMethod = new (src.Name, src.Attributes, targetModule.ImportReference(src.ReturnType));
         AttributesCloner.CloneAttributes(src, newMethod, targetModule);
-        foreach (var newGp in src.GenericParameters.Select(gp => new GenericParameter(gp.Name, newMethod))) {
+        foreach (var newGp in src.GenericParameters.Select(gp => new GenericParameter(gp.Name, newMethod))) 
             newMethod.GenericParameters.Add(newGp);
-        }
-        foreach (var p in src.Parameters) {
+        foreach (var p in src.Parameters) 
             newMethod.Parameters.Add(new(p.Name, p.Attributes, targetModule.ImportReference(p.ParameterType)));
-        }
         if (!src.HasBody)
             return newMethod;
         newMethod.Body = new MethodBody(newMethod);
@@ -23,8 +21,8 @@ public static class MethodCloner {
 
     public static void ReplaceMethodBody(MethodDefinition originalMethod, MethodDefinition newMethod,
         ModuleDefinition targetModule) { 	
-        originalMethod.Body = new(originalMethod);
         originalMethod.Attributes = newMethod.Attributes;
+        originalMethod.Body = new(originalMethod);
         CopyMethodBody(newMethod.Body, originalMethod.Body, targetModule, newMethod, originalMethod.DeclaringType);
         originalMethod.CustomAttributes.Clear();
         AttributesCloner.CloneAttributes(newMethod, originalMethod, targetModule);
@@ -43,10 +41,11 @@ public static class MethodCloner {
         }
         targetBody.InitLocals = sourceBody.InitLocals;
         targetBody.MaxStackSize = sourceBody.MaxStackSize;
+        
         var parameterMap = new Map<ParameterDefinition>();
-        for (var i = 0; i < sourceParams.Count; i++) {
+        for (var i = 0; i < sourceParams.Count; i++) 
             parameterMap[sourceParams[i]] = targetParams[i];
-        }
+        
         var ilProcessor = targetBody.GetILProcessor();
         var instructionMap = new Map<Instruction>();
         foreach (var instr in sourceBody.Instructions) {
@@ -54,6 +53,7 @@ public static class MethodCloner {
             instructionMap[instr] = cloned;
             ilProcessor.Append(cloned);
         }
+        
         foreach (var ci in targetBody.Instructions) {
             ci.Operand = ci.Operand switch {
                 Instruction oldTarget when instructionMap.TryGetValue(oldTarget, out var value) => value,
@@ -61,6 +61,7 @@ public static class MethodCloner {
                 _ => ci.Operand
             };
         }
+        
         foreach (var h in sourceBody.ExceptionHandlers) {
             var nh = new ExceptionHandler(h.HandlerType) {
                 CatchType = h.CatchType != null ? module.ImportReference(h.CatchType) : null,
