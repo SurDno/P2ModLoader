@@ -25,8 +25,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="Resources\classdata.tpk" />
-      <Content Include="Resources\classdata.tpk">
+      <None Remove="Resources\cldb_2018.4.6f1.dat" />
+      <Content Include="Resources\cldb_2018.4.6f1.dat">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
     </ItemGroup>
