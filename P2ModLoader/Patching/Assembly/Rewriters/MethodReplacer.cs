@@ -2,7 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace P2ModLoader.Patching.Assembly;
+namespace P2ModLoader.Patching.Assembly.Rewriters;
 
 public class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharpSyntaxRewriter {
 	private bool _addedNewMethods;

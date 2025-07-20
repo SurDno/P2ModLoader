@@ -9,6 +9,7 @@ using Mono.Cecil;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.Patching.Assembly.ILCloning;
+using P2ModLoader.Patching.Assembly.Rewriters;
 using LanguageVersion = Microsoft.CodeAnalysis.CSharp.LanguageVersion;
 
 namespace P2ModLoader.Patching.Assembly;
@@ -269,6 +270,10 @@ public static class AssemblyPatcher {
         var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass)
                             ?? decompClass;
 
+        var propertyReplacements = propertyGroup.Select(p => new PropertyReplacement(p.Identifier.Text, p)).ToList();
+        var propRewriter = new PropertyReplacer(propertyReplacements);
+        modifiedClass = (ClassDeclarationSyntax)propRewriter.Visit(modifiedClass);
+        
         var existingPropNames = decompClass.Members.OfType<PropertyDeclarationSyntax>().Select(p => p.Identifier.Text).ToHashSet();
         var newProps = propertyGroup.Where(p => !existingPropNames.Contains(p.Identifier.Text)).ToArray();
 
