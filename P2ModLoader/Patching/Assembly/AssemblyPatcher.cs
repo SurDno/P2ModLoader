@@ -287,17 +287,21 @@ public static class AssemblyPatcher {
         var existingEventNames = decompClass.Members.OfType<EventDeclarationSyntax>().Select(e => e.Identifier.Text).ToHashSet();
         var newEvents = events.Where(e => !existingEventNames.Contains(e.Identifier.Text)).ToArray();
         
-        var existingFieldEventNames = decompClass.Members.OfType<EventFieldDeclarationSyntax>().SelectMany(e => e.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
-        var newFieldEvents = eventFields.Where(e => e.Declaration.Variables.Any(v => !existingFieldEventNames.Contains(v.Identifier.Text))).ToArray();
+
+        var existingEventFieldNames = decompClass.Members.OfType<EventFieldDeclarationSyntax>()
+            .SelectMany(fld => fld.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
+
+        var newFieldEvents = eventFields.SelectMany(fld => fld.Declaration.Variables.Select(v => (fld, v)))
+            .Where(pair => !existingEventFieldNames.Contains(pair.v.Identifier.Text))
+            .Select(pair => SyntaxFactory.EventFieldDeclaration(
+                    SyntaxFactory.VariableDeclaration(pair.fld.Declaration.Type)
+                        .WithVariables(SyntaxFactory.SingletonSeparatedList(pair.v)))
+                .WithModifiers(pair.fld.Modifiers)).ToArray();
         
-        if (newProps.Length > 0)
-            modifiedClass = modifiedClass.AddMembers(newProps);
-        if (newFields.Length > 0)
-            modifiedClass = modifiedClass.AddMembers(newFields);
-        if (newEvents.Length > 0)
-            modifiedClass = modifiedClass.AddMembers(newEvents);
-        if (newFieldEvents.Length > 0)
-            modifiedClass = modifiedClass.AddMembers(newFieldEvents);
+        if (newProps.Length > 0) modifiedClass = modifiedClass.AddMembers(newProps);
+        if (newFields.Length > 0) modifiedClass = modifiedClass.AddMembers(newFields);
+        if (newEvents.Length > 0) modifiedClass = modifiedClass.AddMembers(newEvents);
+        if (newFieldEvents.Length > 0) modifiedClass = modifiedClass.AddMembers(newFieldEvents);
         
         CompilationUnitSyntax mergedRoot;
         if (@namespace != null) {
@@ -409,8 +413,7 @@ public static class AssemblyPatcher {
             }
         }
         
-        foreach (var fld in eventFields) {
-            var name = fld.Declaration.Variables.First().Identifier.Text;
+        foreach (var name in eventFields.SelectMany(fld => fld.Declaration.Variables.Select(v => v.Identifier.Text))) {
             var newEv = newType.Events.First(e => e.Name == name);
             var oldEv = originalType.Events.FirstOrDefault(e => e.Name == name);
 
