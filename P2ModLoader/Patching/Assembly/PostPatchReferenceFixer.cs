@@ -1,37 +1,38 @@
 using Mono.Cecil;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly;
 
 public static class PostPatchReferenceFixer {
-    public static void FixReferencesForPatchedType(TypeDefinition type, string tempAsm, ModuleDefinition module) { 	
+    public static void FixReferencesForPatchedType(TypeDefinition type, string tempAsm, ModuleDefinition module) {
         for (var i = module.AssemblyReferences.Count - 1; i >= 0; i--) {
             if (module.AssemblyReferences[i].Name != tempAsm) continue;
             module.AssemblyReferences.RemoveAt(i);
+            Logger.Log(LogLevel.Debug, $"Removed assembly reference '{tempAsm}' from module");
         }
 
         foreach (var field in type.Fields) {
-            if (field.FieldType.Scope?.Name != tempAsm) continue;
-            if (field.FieldType.FullName != type.FullName) continue;
+            if (field.FieldType.Scope?.Name != tempAsm || field.FieldType.FullName != type.FullName) continue;
             field.FieldType = module.ImportReference(type);
+            Logger.Log(LogLevel.Debug, $"Fixed field type reference for '{field.Name}'");
         }
 
         foreach (var prop in type.Properties) {
-            if (prop.PropertyType.Scope?.Name != tempAsm) continue;
-            if (prop.PropertyType.FullName != type.FullName) continue;
+            if (prop.PropertyType.Scope?.Name != tempAsm || prop.PropertyType.FullName != type.FullName) continue;
             prop.PropertyType = module.ImportReference(type);
+            Logger.Log(LogLevel.Debug, $"Fixed property type reference for '{prop.Name}'");
         }
 
         foreach (var method in type.Methods) {
-            if (method.ReturnType.Scope?.Name == tempAsm &&
-                method.ReturnType.FullName == type.FullName) {
+            if (method.ReturnType.Scope?.Name == tempAsm && method.ReturnType.FullName == type.FullName) {
                 method.ReturnType = module.ImportReference(type);
+                Logger.Log(LogLevel.Debug, $"Fixed return type for method '{method.Name}'");
             }
 
             foreach (var param in method.Parameters) {
-                if (param.ParameterType.Scope?.Name == tempAsm &&
-                    param.ParameterType.FullName == type.FullName) {
-                    param.ParameterType = module.ImportReference(type);
-                }
+                if (param.ParameterType.Scope?.Name != tempAsm || param.ParameterType.FullName != type.FullName) continue;
+                param.ParameterType = module.ImportReference(type);
+                Logger.Log(LogLevel.Debug, $"Fixed parameter '{param.Name}' in method '{method.Name}'");
             }
 
             if (!method.HasBody)
@@ -40,39 +41,50 @@ public static class PostPatchReferenceFixer {
             foreach (var instruction in method.Body.Instructions) {
                 switch (instruction.Operand) {
                     case TypeReference tRef:
-                        if (tRef.Scope?.Name == tempAsm && tRef.FullName == type.FullName)
+                        if (tRef.Scope?.Name == tempAsm && tRef.FullName == type.FullName) {
                             instruction.Operand = module.ImportReference(type);
+                            Logger.Log(LogLevel.Debug,
+                                $"Fixed TypeReference operand at IL offset {instruction.Offset} to '{type.FullName}'");
+                        }
                         break;
                     case MethodReference mRef:
-                        if (mRef.DeclaringType.Scope?.Name == tempAsm &&
-                            mRef.DeclaringType.FullName == type.FullName) {
+                        if (mRef.DeclaringType.Scope?.Name == tempAsm && mRef.DeclaringType.FullName == type.FullName) {
                             var localMethod = FindLocalMethod(type, mRef);
                             if (localMethod != null) {
                                 instruction.Operand = module.ImportReference(localMethod);
+                                Logger.Log(LogLevel.Debug, $"Fixed MethodReference at IL offset {instruction.Offset}" +
+                                                           $" to local method '{localMethod.Name}'");
                             } else {
                                 var localTypeRef = module.ImportReference(type);
                                 mRef.DeclaringType = localTypeRef;
+                                Logger.Log(LogLevel.Debug, $"Updated DeclaringType for MethodReference at IL offset " +
+                                                           $"{instruction.Offset} to patched type '{type.FullName}'");
                             }
                         }
                         break;
                     case FieldReference fRef:
                         if (fRef.DeclaringType.Scope?.Name == tempAsm && fRef.DeclaringType.FullName == type.FullName) {
                             var localField = type.Fields.FirstOrDefault(f => f.Name == fRef.Name);
-                            if (localField != null)
+                            if (localField != null) {
                                 instruction.Operand = module.ImportReference(localField);
-                            else
+                                Logger.Log(LogLevel.Debug, $"Fixed FieldReference at IL offset {instruction.Offset}" +
+                                                           $" to local field '{localField.Name}'");
+                            } else {
                                 fRef.DeclaringType = module.ImportReference(type);
+                                Logger.Log(LogLevel.Debug, $"Updated DeclaringType for FieldReference at IL offset " +
+                                                           $"{instruction.Offset} to patched type '{type.FullName}'");
+                            }
                         }
                         break;
                 }
             }
         }
 
-        foreach (var nested in type.NestedTypes) 
+        foreach (var nested in type.NestedTypes)
             FixReferencesForPatchedType(nested, tempAsm, module);
     }
 
-    private static MethodDefinition? FindLocalMethod(TypeDefinition originalType, MethodReference oldMethodRef) { 	
+    private static MethodDefinition? FindLocalMethod(TypeDefinition originalType, MethodReference oldMethodRef) {
         var matching = originalType.Methods.Where(m => m.Name == oldMethodRef.Name
                                                        && m.Parameters.Count == oldMethodRef.Parameters.Count);
 

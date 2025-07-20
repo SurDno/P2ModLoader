@@ -15,6 +15,6 @@ public class PropertyReplacer : CSharpSyntaxRewriter {
 		if (_map.TryGetValue(node.Identifier.Text, out var replacement)) 
 			return replacement.WithModifiers(replacement.Modifiers).WithAttributeLists(replacement.AttributeLists);
 
-		return base.VisitPropertyDeclaration(node);
+		return base.VisitPropertyDeclaration(node)!;
 	}
 }

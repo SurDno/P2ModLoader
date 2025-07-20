@@ -32,8 +32,8 @@ public static class AssemblyPatcher {
             var enumDeclarations = updatedRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
             var interfaceDeclarations = updatedRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
             
-            var namespaceDecl = updatedRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
-            var namespaceName = namespaceDecl?.Name.ToString() ?? string.Empty;
+            var @namespace = updatedRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+            var namespaceName = @namespace?.Name.ToString() ?? string.Empty;
             
             var hasClass = classDeclarations.Count != 0;
             var hasEnum = enumDeclarations.Count != 0;
@@ -77,7 +77,7 @@ public static class AssemblyPatcher {
 
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
                 if (originalType == null) {
-                    if (!TryAddNewType(references, namespaceDecl, enumDecl, originalAssembly, readerParams))
+                    if (!TryAddNewType(references, @namespace, enumDecl, originalAssembly, readerParams))
                         return false;
 
                     Logger.Log(LogLevel.Info, $"Added new enum {fullTypeName}.");
@@ -97,7 +97,7 @@ public static class AssemblyPatcher {
                 var originalType = originalAssembly.MainModule.GetType(fullTypeName);
                 if (originalType == null) {
                     Logger.Log(LogLevel.Info, $"Adding new interface {fullTypeName}.");
-                    if (!TryAddNewType(references, namespaceDecl, interfaceDecl, originalAssembly, readerParams))
+                    if (!TryAddNewType(references, @namespace, interfaceDecl, originalAssembly, readerParams))
                         return false;
                 } else {
                     Logger.Log(LogLevel.Error, $"Interface {fullTypeName} already exists; can't patch existing interfaces.");
@@ -116,12 +116,12 @@ public static class AssemblyPatcher {
 
                 if (originalType == null) {
                     Logger.Log(LogLevel.Info, $"Adding new type {fullTypeName}.");
-                    if (!TryAddNewType(references, namespaceDecl, classDecl, originalAssembly, readerParams))
+                    if (!TryAddNewType(references, @namespace, classDecl, originalAssembly, readerParams))
                         return false;
                 } else {
                     if (members.Count != 0) {
                         Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
-                        if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, namespaceDecl,
+                        if (!TryUpdateClassTypeMembers(decompiler, originalAssembly, fullTypeName, @namespace,
                                 classDecl, methods, properties, fields, updatedRoot, references, readerParams))
                             return false;
                     } else {
@@ -216,11 +216,11 @@ public static class AssemblyPatcher {
         CSharpDecompiler decompiler,
         AssemblyDefinition originalAssembly,
         string fullTypeName,
-        NamespaceDeclarationSyntax? namespaceDecl,
-        ClassDeclarationSyntax classDecl,
-        List<MethodDeclarationSyntax> methodGroup,
-        List<PropertyDeclarationSyntax> propertyGroup,
-        List<FieldDeclarationSyntax> fieldGroup,
+        NamespaceDeclarationSyntax? @namespace,
+        ClassDeclarationSyntax @class,
+        List<MethodDeclarationSyntax> methods,
+        List<PropertyDeclarationSyntax> properties,
+        List<FieldDeclarationSyntax> fields,
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
         ReaderParameters readerParams) { 	
@@ -239,14 +239,14 @@ public static class AssemblyPatcher {
             return false;
         }
 
-        var decompClass = FindTypeDeclaration<ClassDeclarationSyntax>(decompRoot, classDecl.Identifier.Text);
+        var decompClass = FindTypeDeclaration<ClassDeclarationSyntax>(decompRoot, @class.Identifier.Text);
 
         if (decompClass == null) {
-            ErrorHandler.Handle($"Failed to find class {classDecl.Identifier.Text} in source.", null);
+            ErrorHandler.Handle($"Failed to find class {@class.Identifier.Text} in source.", null);
             return false;
         }
 
-        var methodReplacements = methodGroup.Select(m => new MethodReplacement(
+        var methodReplacements = methods.Select(m => new MethodReplacement(
             m.Identifier.Text,
             m.ParameterList.Parameters.Select(p => p.Type.ToString()).ToList(),
             m
@@ -270,15 +270,15 @@ public static class AssemblyPatcher {
         var modifiedClass = (ClassDeclarationSyntax?)methodRewriter.Visit(decompClass)
                             ?? decompClass;
 
-        var propertyReplacements = propertyGroup.Select(p => new PropertyReplacement(p.Identifier.Text, p)).ToList();
+        var propertyReplacements = properties.Select(p => new PropertyReplacement(p.Identifier.Text, p)).ToList();
         var propRewriter = new PropertyReplacer(propertyReplacements);
         modifiedClass = (ClassDeclarationSyntax)propRewriter.Visit(modifiedClass);
         
         var existingPropNames = decompClass.Members.OfType<PropertyDeclarationSyntax>().Select(p => p.Identifier.Text).ToHashSet();
-        var newProps = propertyGroup.Where(p => !existingPropNames.Contains(p.Identifier.Text)).ToArray();
+        var newProps = properties.Where(p => !existingPropNames.Contains(p.Identifier.Text)).ToArray();
 
         var existingFieldNames = decompClass.Members.OfType<FieldDeclarationSyntax>().SelectMany(f => f.Declaration.Variables).Select(v => v.Identifier.Text).ToHashSet();
-        var newFields = fieldGroup.Where(f => f.Declaration.Variables.Any(v => !existingFieldNames.Contains(v.Identifier.Text))).ToArray();
+        var newFields = fields.Where(f => f.Declaration.Variables.Any(v => !existingFieldNames.Contains(v.Identifier.Text))).ToArray();
 
         if (newProps.Length > 0)
             modifiedClass = modifiedClass.AddMembers(newProps);
@@ -286,8 +286,8 @@ public static class AssemblyPatcher {
             modifiedClass = modifiedClass.AddMembers(newFields);
 
         CompilationUnitSyntax mergedRoot;
-        if (namespaceDecl != null) {
-            var mergedNs = SyntaxFactory.NamespaceDeclaration(namespaceDecl.Name)
+        if (@namespace != null) {
+            var mergedNs = SyntaxFactory.NamespaceDeclaration(@namespace.Name)
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(modifiedClass));
             mergedRoot = SyntaxFactory.CompilationUnit()
                 .WithUsings(ReferenceCollector.MergeUsings(decompRoot, updatedRoot))
@@ -340,7 +340,7 @@ public static class AssemblyPatcher {
             PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
         }
 
-        foreach (var methodName in methodGroup.Select(m => m.Identifier.Text)) {
+        foreach (var methodName in methods.Select(m => m.Identifier.Text)) {
             var newMethod = newType.Methods.FirstOrDefault(m => m.Name == methodName);
             var originalMethod = originalType.Methods.FirstOrDefault(m => m.Name == methodName);
 
@@ -361,7 +361,7 @@ public static class AssemblyPatcher {
         }
 
 
-        foreach (var fieldDecl in fieldGroup) {
+        foreach (var fieldDecl in fields) {
             foreach (var variable in fieldDecl.Declaration.Variables) {
                 var fieldName = variable.Identifier.Text;
                 if (originalType.Fields.Any(f => f.Name == fieldName)) continue;
@@ -370,7 +370,7 @@ public static class AssemblyPatcher {
             }
         }
 
-        foreach (var propDecl in propertyGroup) {
+        foreach (var propDecl in properties) {
             var propName = propDecl.Identifier.Text;
             var newPropDef = newType.Properties.First(p => p.Name == propName);
             var existingPropDef = originalType.Properties.FirstOrDefault(p => p.Name == propName);

@@ -33,6 +33,6 @@ public class MethodReplacer(List<MethodReplacement> methodReplacements) : CSharp
 			.Select(r => r.ReplacementMethod);
 
 		_addedNewMethods = true;
-		return updatedNode.AddMembers(newMethods.ToArray());
+		return updatedNode.AddMembers(newMethods.ToArray<MemberDeclarationSyntax>());
 	}
 }
