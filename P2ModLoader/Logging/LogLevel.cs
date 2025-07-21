@@ -7,7 +7,7 @@ public enum LogLevel : byte {
 	Warning = 3,
 	Success = 4,
 	Info = 5,
-	Performance = 6,
-	Debug = 7,
+	Debug = 6,
+	Performance = 7,
 	Trace = 8
 }
