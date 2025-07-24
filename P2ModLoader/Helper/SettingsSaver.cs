@@ -62,7 +62,7 @@ public static class SettingsSaver {
     private static void SaveSettings() { 	
         if (_pauseSaving) return;
         
-        Logger.Log(LogLevel.Info, $"Saving new settings to settings.json.");
+        Logger.Log(LogLevel.Debug, $"Saving new settings to settings.json.");
         try {
             Directory.CreateDirectory(SettingsDirectory);
             

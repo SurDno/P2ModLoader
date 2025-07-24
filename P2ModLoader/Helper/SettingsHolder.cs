@@ -29,7 +29,7 @@ public static class SettingsHolder {
         
 			_installPath = isValid ? value : null;
 			InstallPathChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(InstallPath)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(InstallPath)} changed to: {value}");
 		}
 	}
 
@@ -38,7 +38,7 @@ public static class SettingsHolder {
 		set { 	
 			_allowStartupWithConflicts = value;
 			StartupWithConflictsChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(AllowStartupWithConflicts)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(AllowStartupWithConflicts)} changed to: {value}");
 		}
 	}
 
@@ -48,7 +48,7 @@ public static class SettingsHolder {
 			if (_isPatched == value) return;
 			_isPatched = value;
 			PatchStatusChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(IsPatched)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(IsPatched)} changed to: {value}");
 		}
 	}
 
@@ -58,7 +58,7 @@ public static class SettingsHolder {
 			if (_checkForUpdatesOnStartup == value) return;
 			_checkForUpdatesOnStartup = value;
 			CheckForUpdatesOnStartupChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(CheckForUpdatesOnStartup)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(CheckForUpdatesOnStartup)} changed to: {value}");
 		}
 	}
 
@@ -67,7 +67,7 @@ public static class SettingsHolder {
 		set { 	
 			_lastKnownModState = value.ToList();
 			ModStateChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(LastKnownModState)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(LastKnownModState)} changed to: {value}");
 		}
 	}
 
@@ -86,7 +86,7 @@ public static class SettingsHolder {
 			if (_windowSize == value) return;
 			_windowSize = value;
 			WindowSizeChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(WindowSize)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(WindowSize)} changed to: {value}");
 		}
 	}
 	
@@ -96,7 +96,7 @@ public static class SettingsHolder {
 			if (_logLevel == value) return;
 			_logLevel = value;
 			LogLevelChanged?.Invoke();
-			Logger.Log(LogLevel.Info, $"Setting {nameof(LogLevel)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(LogLevel)} changed to: {value}");
 		}
 	}
 }
