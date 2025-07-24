@@ -8,6 +8,9 @@ public static class Logger {
     private static readonly object LockObject = new();
     private static readonly List<string> BufferedLogs = [];
     private static string? _lastInstallLogPath;
+    
+    public static event Action<string>? LogMessageAdded;
+    private static readonly List<string> _logMessages = new();
 
     static Logger() {
         var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
@@ -42,6 +45,9 @@ public static class Logger {
                 File.AppendAllText(ExeLogFilePath, logMessage + Environment.NewLine);
                 BufferedLogs.Add(logMessage);
 
+                _logMessages.Add(logMessage);
+                LogMessageAdded?.Invoke(logMessage);
+
                 var installLogPath = GetInstallLogPath();
                 if (installLogPath == null) return;
                 HandleInstallPathChange(installLogPath);
@@ -57,6 +63,10 @@ public static class Logger {
             return;
 
         WriteToLogs($"{lvl.ToString().ToUpper()}: {handler.ToString()}");
+    }
+    
+    public static List<string> GetAllMessages() {
+        lock (LockObject) { return [.._logMessages]; }
     }
 
     public static void LogLineBreak(LogLevel lvl) {

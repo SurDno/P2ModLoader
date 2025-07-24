@@ -1,5 +1,6 @@
 using P2ModLoader.Forms.Tabs;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching;
 using P2ModLoader.Update;
@@ -13,6 +14,9 @@ public class MainForm : Form {
     private Button? _launchSteamButton;
     private ModsTab? _modsTab;
     private Label? _patchStatusLabel;
+    private StatusStrip _statusStrip;
+    private ToolStripStatusLabel _logStatusLabel;
+    private LogViewerForm? _logViewerForm;
     
     public MainForm() { 	
         //InitializeComponent();
@@ -109,6 +113,48 @@ public class MainForm : Form {
         SettingsHolder.StartupWithConflictsChanged += UpdateControls;
         _modsTab.ModsChanged += UpdateControls;
         UpdateControls();
+        
+        _statusStrip = new StatusStrip { 
+            Height = 25,
+            Dock = DockStyle.Bottom 
+        };
+
+        _logStatusLabel = new ToolStripStatusLabel { 
+            Spring = true, 
+            TextAlign = ContentAlignment.MiddleLeft 
+        };
+        _logStatusLabel.Text = "Test message - status strip is working!";
+        _logStatusLabel.Click += OnLogStatusClick;
+        _statusStrip.Items.Add(_logStatusLabel);;
+        Controls.Add(_statusStrip);
+
+        Logger.LogMessageAdded += OnLogMessageAdded;
+    }
+    
+    protected override void Dispose(bool disposing) {
+        if (disposing) 
+            Logger.LogMessageAdded -= OnLogMessageAdded;
+        base.Dispose(disposing);
+    }
+    
+    private void OnLogMessageAdded(string message) {
+        if (InvokeRequired) {
+            Invoke(() => OnLogMessageAdded(message));
+            return;
+        }
+
+        var displayMessage = message;
+        if (message.Contains("] ")) 
+            displayMessage = message[(message.IndexOf("] ", StringComparison.Ordinal) + 2)..];
+
+        _logStatusLabel.Text = displayMessage.Length > 100 ? $"{displayMessage[..97]}..." : displayMessage;
+    }
+
+    private void OnLogStatusClick(object? sender, EventArgs e) {
+        if (_logViewerForm == null || _logViewerForm.IsDisposed) 
+            _logViewerForm = new LogViewerForm();
+
+        _logViewerForm.Show();
     }
 
     private static Button NewButton() => new() {
