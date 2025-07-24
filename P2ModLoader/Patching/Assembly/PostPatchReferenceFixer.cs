@@ -44,6 +44,15 @@ public static class PostPatchReferenceFixer {
                                 $"Fixed TypeReference operand at IL offset {instruction.Offset} to '{type.FullName}'");
                         }
                         break;
+                    case GenericInstanceMethod oldGim:
+                        var defRef =  module.ImportReference(oldGim.ElementMethod);
+                        var newGim = new GenericInstanceMethod(defRef);
+                        foreach (var ga in oldGim.GenericArguments)
+                            newGim.GenericArguments.Add(module.ImportReference(ga));
+                        instruction.Operand = newGim;
+                        Logger.Log(LogLevel.Debug,
+                            $"Fixed GenericInstanceMethod at IL offset {instruction.Offset} to {newGim.FullName}");
+                        break;
                     case MethodReference mRef:
                         if (mRef.DeclaringType.Scope?.Name == tempAsm && mRef.DeclaringType.FullName == type.FullName) {
                             var localMethod = FindLocalMethod(type, mRef);
