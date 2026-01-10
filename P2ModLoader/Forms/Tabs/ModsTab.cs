@@ -60,13 +60,13 @@ public class ModsTab : BaseTab {
         var installPath = SettingsHolder.InstallPath;
 
         if (string.IsNullOrEmpty(installPath)) {
-            ShowMessage("Head to Settings to specify the install path.", false);
+            ShowMessage("Head to Installs to specify the install path.", false);
             return;
         }
 
         var modsPath = Path.Combine(installPath, "Mods");
         if (!Directory.Exists(modsPath)) {
-            ShowMessage("P2ModLoader has not been initialized in this directory yet. " +
+            ShowMessage("P2ModLoader has not been initialized for this installation yet. " +
                         "Press \"Initialize\" to generate the necessary folders.", true);
             return;
         }
@@ -161,8 +161,7 @@ public class ModsTab : BaseTab {
         _messageContainer.Controls.Add(buttonPanel, 0, 1);
     }
 
-    private void InitializeModListView() { 	
-        ConflictManager.PrecomputeAllConflicts(ModManager.Mods);
+    private void InitializeModListView() { 
         _modListView = new ListView {
             Dock = DockStyle.Fill,
             View = View.Details,
@@ -215,12 +214,14 @@ public class ModsTab : BaseTab {
         };
         refreshButton.Click += (_, _) => {
             SettingsSaver.PauseSaving();
-            var tempInstallPath = SettingsHolder.InstallPath;
-            var tempIsPatched = SettingsHolder.IsPatched;
-            SettingsHolder.InstallPath = string.Empty;
-            SettingsHolder.InstallPath = tempInstallPath;
-            SettingsHolder.IsPatched = tempIsPatched;
-            ConflictManager.PrecomputeAllConflicts(ModManager.Mods);
+            //var currentInstallId = SettingsHolder.SelectedInstall?.Id;
+            //var tempIsPatched = SettingsHolder.IsPatched;
+            //SettingsHolder.SelectInstall(null);
+            //SettingsHolder.SelectInstall(currentInstallId);
+            //SettingsHolder.IsPatched = tempIsPatched;
+            ModManager.ScanModsForInstall(SettingsHolder.SelectedInstall!);
+            ConflictManager.PrecomputeConflictsForInstall(SettingsHolder.SelectedInstall!);
+            RefreshModList();
             SettingsSaver.UnpauseSaving();
         };
 

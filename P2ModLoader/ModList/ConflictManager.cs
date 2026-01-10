@@ -1,5 +1,6 @@
 using P2ModLoader.Data;
 using P2ModLoader.Forms;
+using P2ModLoader.Helper;
 
 namespace P2ModLoader.ModList;
 
@@ -31,22 +32,39 @@ public static class ConflictManager {
 
     public static void ClearCache() => _conflictCache.Clear();
 
-    public static void PrecomputeAllConflicts(IEnumerable<Mod> allMods) { 	
-        _conflictCache.Clear();
-
-        var modsList = allMods.ToList();
-        
+    public static void PrecomputeConflictsForInstall(Install install) {
+        var mods = ModManager.GetModsForInstall(install).ToList();
+    
+        if (mods.Count == 0) return;
+    
         using var progressForm = new ProgressForm();
         progressForm.Text = "Preloading mods...";
-        progressForm.TitleText = "Analysing mod conflicts.";
+        progressForm.TitleText = $"Analysing mod conflicts for {install.DisplayName}";
         progressForm.Show();
         Application.DoEvents();
 
-        for (var index = 0; index < modsList.Count; index++) {
-            var mod = modsList[index];
+        for (var index = 0; index < mods.Count; index++) {
+            var mod = mods[index];
             var key = NormalizePath(mod.FolderPath);
-            progressForm.UpdateProgress(index, modsList.Count, $"Preloading conflicts for mod {mod.FolderName}");
-            _conflictCache[key] = ComputeAllConflicts(mod, modsList);
+            progressForm.UpdateProgress(index, mods.Count, $"Preloading conflicts for mod {mod.FolderName}");
+        
+            _conflictCache.Remove(key);
+            _conflictCache[key] = ComputeAllConflicts(mod, mods);
+        }
+    }
+
+    public static void PrecomputeAllInstallConflicts() {
+        foreach (var install in SettingsHolder.Installs) {
+            var mods = ModManager.GetModsForInstall(install).ToList();
+        
+            if (mods.Count == 0) continue;
+        
+            for (var index = 0; index < mods.Count; index++) {
+                var mod = mods[index];
+                var key = NormalizePath(mod.FolderPath);
+            
+                _conflictCache[key] = ComputeAllConflicts(mod, mods);
+            }
         }
     }
 

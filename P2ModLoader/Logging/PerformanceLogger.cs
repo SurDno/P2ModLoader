@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
-using P2ModLoader.Helper;
 
 namespace P2ModLoader.Logging;
 

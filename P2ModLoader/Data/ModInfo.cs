@@ -11,7 +11,8 @@ public class ModInfo {
 	public List<string> Requirements { get; private set; } = [];
 	public List<string> LoadAfterMods { get; private set; } = []; 
 	public List<string> LoadFirst { get; private set; } = [];
-	public string MinLoaderVersion { get; private set; }
+	public string MinLoaderVersion { get; private set; } = string.Empty;
+	public List<Game> Games { get; private set; } = [Game.Pathologic2];
 
 	public static ModInfo FromFile(string filePath) { 	
 		var info = new ModInfo();
@@ -53,10 +54,13 @@ public class ModInfo {
 				case "min_loader_version":
 					info.MinLoaderVersion = value;
 					break;
+				case "games":
+					info.Games = ParseGames(value);
+					break;
 				default:
 					ErrorHandler.Handle($"Mod located at {Path.GetDirectoryName(filePath)} has unsupported setting in" +
 					                    $" its ModInfo.ltx: {key}. Either there is a mistake in the file, or an" +
-					                    $" update to the mod loader is required to properly parse that", null);
+					                    $" update to the mod loader is required to properly parse that data.", null);
 					break;
 			}
 		}
@@ -66,4 +70,27 @@ public class ModInfo {
 
 	private static List<string> GetList(string value) =>
 		value.Split(',').Select(x => x.Trim()).Where(x => !string.IsNullOrEmpty(x)).ToList();
+	
+	private static List<Game> ParseGames(string value) {
+		var gameNames = GetList(value);
+		var games = new List<Game>();
+		
+		foreach (var gameName in gameNames) {
+			Game? parsed = gameName.ToLower().Replace(" ", "") switch {
+				"marblenest" or "mn" => Game.MarbleNest,
+				"pathologic2alpha" or "p2a" => Game.Pathologic2Alpha,
+				"pathologic2demo" or "p2d" => Game.Pathologic2Demo,
+				"pathologic2" or "p2" => Game.Pathologic2,
+				"pathologic3quarantine" or "p3q" or "quarantine" => Game.Pathologic3Quarantine,
+				"pathologic3demo" or "p3d" => Game.Pathologic3Demo,
+				"pathologic3" or "p3" => Game.Pathologic3,
+				_ => null
+			};
+			
+			if (parsed.HasValue && !games.Contains(parsed.Value))
+				games.Add(parsed.Value);
+		}
+		
+		return games.Count > 0 ? games : [Game.Pathologic2];
+	}
 }

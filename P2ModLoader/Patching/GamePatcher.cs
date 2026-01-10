@@ -10,8 +10,6 @@ using P2ModLoader.Patching.Xml;
 namespace P2ModLoader.Patching;
 
 public static class GamePatcher {
-    private const string MANAGED_PATH = "Pathologic_Data/Managed/";
-    private const string ASSETS_PATH = "Pathologic_Data/";
     private const string DATA_PATH = "Data/";
     private static ProgressForm? _progressForm;
 
@@ -43,8 +41,8 @@ public static class GamePatcher {
             Logger.Log(LogLevel.Info, $"Processing mod {mod.Info.Name}");
             _progressForm?.UpdateProgress(index, enabledMods.Count, $"Loading mod: {mod.Info.Name}");
 
-            var managedPath = Path.Combine(mod.FolderPath, MANAGED_PATH);
-            var assetsPath = Path.Combine(mod.FolderPath, ASSETS_PATH);
+            var managedPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.ManagedPath);
+            var assetsPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.AssetsPath);
 
             if (Directory.Exists(managedPath) && !TryProcessAssemblies(managedPath, mod)) return false;
             if (Directory.Exists(assetsPath) && !ProcessAssets(assetsPath, mod)) return false;
@@ -58,7 +56,7 @@ public static class GamePatcher {
     private static bool TryProcessAssemblies(string modAssemblyPath, Mod mod) { 	
         foreach (var source in Directory.GetFileSystemEntries(modAssemblyPath)) {
             var name = Path.GetFileName(source);
-            var target = Path.Combine(SettingsHolder.InstallPath!, MANAGED_PATH, name);
+            var target = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.FullManagedPath, name);
                 
             if (File.Exists(source)) {
                 if (!Path.GetExtension(source).Equals(".dll", StringComparison.OrdinalIgnoreCase)) continue;
@@ -94,10 +92,12 @@ public static class GamePatcher {
 
     private static bool ProcessAssets(string modAssetsPath, Mod mod) { 	
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
-            if (directory.EndsWith(MANAGED_PATH.TrimEnd('/'), StringComparison.OrdinalIgnoreCase)) continue;
+            if (directory.EndsWith(SettingsHolder.SelectedInstall!.ManagedPath.TrimEnd('/'),
+                    StringComparison.OrdinalIgnoreCase)) continue;
 
             var assetsFileName = Path.GetFileName(directory);
-            var targetPath = Path.Combine(SettingsHolder.InstallPath!, ASSETS_PATH, assetsFileName);
+            var targetPath = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.AssetsPath, 
+                assetsFileName);
 
             BackupManager.CreateBackup(targetPath);
             Logger.Log(LogLevel.Info, $"Backing up assets file: {targetPath}");

@@ -3,15 +3,13 @@ using P2ModLoader.Patching;
 
 namespace P2ModLoader.Helper {
 	public static class GameLauncher {
-		private const string EXE_PATH = "Pathologic.exe";
-
 		public static void LaunchExe() { 	
-			if (SettingsHolder.InstallPath == null)
-				return;
+			var install = SettingsHolder.SelectedInstall;
+			if (install == null) return;
 
 			if (!SettingsHolder.IsPatched && !GamePatcher.TryPatch()) return;
 
-			var gameExecutable = Path.Combine(SettingsHolder.InstallPath, EXE_PATH);
+			var gameExecutable = install.ExecutablePath;
 
 			Process.Start(new ProcessStartInfo {
 				FileName = gameExecutable,
@@ -20,14 +18,17 @@ namespace P2ModLoader.Helper {
 		}
 
 		public static void LaunchSteam() { 	
-			if (SettingsHolder.InstallPath == null)
-				return;
+			var install = SettingsHolder.SelectedInstall;
+			if (install == null) return;
 
 			if (!SettingsHolder.IsPatched && !GamePatcher.TryPatch()) return;
 
+			var steamPath = InstallationLocator.FindSteam();
+			if (steamPath == null || !install.IsSteamInstall) return;
+			
 			var steamProcess = new ProcessStartInfo {
-				FileName = Path.Combine(InstallationLocator.FindSteam()!, InstallationLocator.SteamExe),
-				Arguments = "-applaunch 505230"
+				FileName = Path.Combine(steamPath, InstallationLocator.SteamExe),
+				Arguments = $"-applaunch {install.SteamAppId}"
 			};
 
 			Process.Start(steamProcess);

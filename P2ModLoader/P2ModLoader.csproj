@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <Version>0.3.0</Version>
+        <Version>0.4.0</Version>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net8.0-windows</TargetFramework>
         <LangVersion>latestmajor</LangVersion>
@@ -29,6 +29,23 @@
       <Content Include="Resources\cldb_2018.4.6f1.dat">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Resources\p2.jpg" />
+      <EmbeddedResource Include="Resources\p2.jpg" />
+      <None Remove="Resources\p3.jpg" />
+      <EmbeddedResource Include="Resources\p3.jpg" />
+      <None Remove="Resources\p3d.jpg" />
+      <EmbeddedResource Include="Resources\p3d.jpg" />
+      <None Remove="Resources\p3q.jpg" />
+      <EmbeddedResource Include="Resources\p3q.jpg" />
+      <None Remove="Resources\tmn.jpg" />
+      <EmbeddedResource Include="Resources\tmn.jpg" />
+      <None Remove="Resources\p2d.jpg" />
+      <EmbeddedResource Include="Resources\p2d.jpg" />
+      <None Remove="Resources\steam.png" />
+      <EmbeddedResource Include="Resources\steam.png" />
     </ItemGroup>
 
 </Project>

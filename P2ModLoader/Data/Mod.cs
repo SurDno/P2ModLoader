@@ -21,6 +21,8 @@ public class Mod {
 		IsEnabled = false;
 		LoadOrder = 0;
 	}
+	
+	public bool IsCompatibleWith(Install install) => Info.Games.Contains(install.Game);
 
 	public string GetModificationTypes() { 	
 		var modTypes = new List<string>();
@@ -31,6 +33,7 @@ public class Mod {
 		AddToListIfDefinitionExists(modTypes, "gz", "templates", Path.Combine(FolderPath, "Data", "Templates"));
 		AddToListIfDefinitionExists(modTypes, "xml", "VM", Path.Combine(FolderPath, "Data", "VirtualMachine"));
 		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic_Data"));
+		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic3_Data"));
     
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}

@@ -110,7 +110,7 @@ namespace P2ModLoader.Patching.Assets {
                 var am = new AssetsManager();
                 am.LoadClassDatabase("Resources/cldb_2018.4.6f1.dat");
                 
-                var ggmPath = Path.Combine(gamePath, "Pathologic_Data", "globalgamemanagers");
+                var ggmPath = Path.Combine(SettingsHolder.SelectedInstall!.FullAssetsPath, "globalgamemanagers");
                 if (!File.Exists(ggmPath)) {
                     Logger.Log(LogLevel.Error, $"Could not find globalgamemanagers at {ggmPath}");
                     return;

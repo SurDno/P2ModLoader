@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using PostSharp.Aspects;
@@ -9,6 +8,8 @@ using PostSharp.Serialization;
 [assembly: AutoPerformanceLogHook(AttributeTargetTypes = "P2ModLoader.Logging.*", AttributeExclude = true)]
 // TODO: separate settings from the rest of helper methods and exclude just the settings.
 [assembly: AutoPerformanceLogHook(AttributeTargetTypes = "P2ModLoader.Helper.*", AttributeExclude = true)]
+[assembly: AutoPerformanceLogHook(AttributeTargetTypes = "P2ModLoader.Forms.*", AttributeExclude = true)]
+
 namespace P2ModLoader.Logging;
 
 [PSerializable]

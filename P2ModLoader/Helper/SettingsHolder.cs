@@ -4,7 +4,8 @@ using P2ModLoader.Logging;
 namespace P2ModLoader.Helper;
 
 public static class SettingsHolder {
-	private static string? _installPath;
+	private static List<Install> _installs = [];
+	private static string? _selectedInstallId;
 	private static bool _allowStartupWithConflicts;
 	private static bool _isPatched = true;
 	private static bool _checkForUpdatesOnStartup = true;
@@ -13,6 +14,7 @@ public static class SettingsHolder {
 	private static LogLevel _logLevel = LogLevel.Info;
 	
 	public static event Action? InstallPathChanged,
+		InstallsChanged,
 		StartupWithConflictsChanged,
 		PatchStatusChanged,
 		ModStateChanged,
@@ -20,17 +22,49 @@ public static class SettingsHolder {
 		WindowSizeChanged,
 		LogLevelChanged;
 
-	public static string? InstallPath {
-		get => _installPath;
-		set { 	
-			var isValid = value != null && File.Exists(Path.Combine(value, "Pathologic.exe"));
-        
-			if (_installPath == value) return;
-        
-			_installPath = isValid ? value : null;
-			InstallPathChanged?.Invoke();
-			Logger.Log(LogLevel.Debug, $"Setting {nameof(InstallPath)} changed to: {value}");
+	public static List<Install> Installs {
+		get => _installs;
+		set {
+			_installs = value;
+			InstallsChanged?.Invoke();
 		}
+	}
+	
+	public static Install? SelectedInstall => _installs.FirstOrDefault(i => i.Id == _selectedInstallId);
+	
+	public static string? InstallPath => SelectedInstall?.InstallPath;
+
+	public static void SelectInstall(string? installId) {
+		if (_selectedInstallId == installId) return;
+		
+		_selectedInstallId = installId;
+		InstallPathChanged?.Invoke();
+		Logger.Log(LogLevel.Info, $"Selected install changed to: {SelectedInstall?.DisplayName ?? "None"}");
+	}
+	
+	public static void AddInstall(Install install) {
+		if (_installs.Any(i => i.Id == install.Id)) return;
+		
+		_installs.Add(install);
+		InstallsChanged?.Invoke();
+		Logger.Log(LogLevel.Info, $"Added install: {install.DisplayName}");
+	}
+	
+	public static void RemoveInstall(string installId) {
+		var install = _installs.FirstOrDefault(i => i.Id == installId);
+		if (install == null) return;
+		
+		_installs.Remove(install);
+		
+		if (_selectedInstallId == installId)
+			SelectInstall(_installs.FirstOrDefault()?.Id);
+		
+		InstallsChanged?.Invoke();
+		Logger.Log(LogLevel.Info, $"Removed install: {install.DisplayName}");
+	}
+	
+	public static void TriggerInstallsChanged() {
+		InstallsChanged?.Invoke();
 	}
 
 	public static bool AllowStartupWithConflicts {
@@ -43,10 +77,11 @@ public static class SettingsHolder {
 	}
 
 	public static bool IsPatched {
-		get => _isPatched;
-		set { 	
-			if (_isPatched == value) return;
-			_isPatched = value;
+		get => SelectedInstall?.IsPatched ?? true;
+		set {
+			if (SelectedInstall == null) return;
+			if (SelectedInstall.IsPatched == value) return;
+			SelectedInstall.IsPatched = value;
 			PatchStatusChanged?.Invoke();
 			Logger.Log(LogLevel.Debug, $"Setting {nameof(IsPatched)} changed to: {value}");
 		}
@@ -63,16 +98,19 @@ public static class SettingsHolder {
 	}
 
 	public static IReadOnlyList<SavedModState> LastKnownModState {
-		get => _lastKnownModState.AsReadOnly();
-		set { 	
-			_lastKnownModState = value.ToList();
+		get => SelectedInstall?.ModState.AsReadOnly() ?? new List<SavedModState>().AsReadOnly();
+		set {
+			if (SelectedInstall == null) return;
+			SelectedInstall.ModState = value.ToList();
 			ModStateChanged?.Invoke();
-			Logger.Log(LogLevel.Debug, $"Setting {nameof(LastKnownModState)} changed to: {value}");
+			Logger.Log(LogLevel.Debug, $"Setting {nameof(LastKnownModState)} changed");
 		}
 	}
 
-	public static void UpdateModState(IEnumerable<Mod> mods) { 	
-		_lastKnownModState = mods.Select(mod => new SavedModState(
+	public static void UpdateModState(IEnumerable<Mod> mods) {
+		if (SelectedInstall == null) return;
+    
+		SelectedInstall.ModState = mods.Select(mod => new SavedModState(
 			mod.FolderName,
 			mod.IsEnabled,
 			mod.LoadOrder
