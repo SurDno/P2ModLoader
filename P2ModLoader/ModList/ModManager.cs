@@ -89,7 +89,10 @@ public static class ModManager {
 
         for (var i = 0; i < visibleMods.Count; i++)
             visibleMods[i].LoadOrder = i;
-            
+    
+        _allMods.Sort((a, b) => a.LoadOrder.CompareTo(b.LoadOrder));
+    
         SettingsHolder.UpdateModState(visibleMods);
+        //ModsLoaded?.Invoke(); 
     }
 }
