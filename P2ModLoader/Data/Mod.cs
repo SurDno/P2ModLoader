@@ -26,14 +26,18 @@ public class Mod {
 
 	public string GetModificationTypes() { 	
 		var modTypes = new List<string>();
-    
+
+		var p2 = Info.Games.Contains(Game.Pathologic2);
+		
 		AddToListIfDefinitionExists(modTypes, "dll", ".dll files", FolderPath);
 		AddToListIfDefinitionExists(modTypes, "cs", "code", FolderPath);
-		AddToListIfDefinitionExists(modTypes, "xml", "templates", Path.Combine(FolderPath, "Data", "Templates"));
-		AddToListIfDefinitionExists(modTypes, "gz", "templates", Path.Combine(FolderPath, "Data", "Templates"));
-		AddToListIfDefinitionExists(modTypes, "xml", "VM", Path.Combine(FolderPath, "Data", "VirtualMachine"));
+		if (p2) {
+			AddToListIfDefinitionExists(modTypes, "xml", "templates", Path.Combine(FolderPath, "Data", "Templates"));
+			AddToListIfDefinitionExists(modTypes, "gz", "templates", Path.Combine(FolderPath, "Data", "Templates"));
+			AddToListIfDefinitionExists(modTypes, "xml", "VM", Path.Combine(FolderPath, "Data", "VirtualMachine"));
+		}
 		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic_Data"));
-		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic3_Data"));
+		AddToListIfDefinitionExists(modTypes, "txt", "assets (text)", Path.Combine(FolderPath, "Pathologic3_Data"));
     
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}
