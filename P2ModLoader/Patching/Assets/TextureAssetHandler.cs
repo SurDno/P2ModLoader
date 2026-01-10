@@ -42,7 +42,7 @@ namespace P2ModLoader.Patching.Assets {
                 textureFile.m_TextureFormat = (int)TextureFormat.RGBA32;
                 
                 try {
-                    textureFile.SetTextureData(bgraData, textureFile.m_Width, textureFile.m_Height);
+                    //textureFile.SetTextureData(bgraData, textureFile.m_Width, textureFile.m_Height);
                     
                     textureFile.WriteTo(baseField);
                     
