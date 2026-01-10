@@ -14,7 +14,8 @@ public static class ReferenceCollector {
 			var fileName = Path.GetFileName(file);
 			try {
 				if (dllPath.Contains(fileName)) continue;
-				references.Add(MetadataReference.CreateFromFile(file));
+				var bytes = File.ReadAllBytes(file);
+				references.Add(MetadataReference.CreateFromImage(bytes));
 			} catch (Exception ex) {
 				Logger.Log(LogLevel.Warning, $"Could not load local assembly {Path.GetFileName(file)}: {ex.Message}");
 			}

@@ -59,7 +59,7 @@ public static class AssemblyPatcher {
 
             var decompiler = new CSharpDecompiler(dllPath, new DecompilerSettings { ShowXmlDocumentation = false });
 
-            var resolver = new DefaultAssemblyResolver();
+            using var resolver = new DefaultAssemblyResolver();
             resolver.AddSearchDirectory(dllDirectory);
 
             var readerParams = new ReaderParameters { AssemblyResolver = resolver, ReadWrite = true };
