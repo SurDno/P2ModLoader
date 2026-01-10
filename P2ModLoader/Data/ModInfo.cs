@@ -3,10 +3,10 @@ using P2ModLoader.Helper;
 namespace P2ModLoader.Data;
 
 public class ModInfo {
-	public string Name { get; private set; } = string.Empty;
-	public string Description { get; private set; } = string.Empty;
-	public string Author { get; private set; } = string.Empty;
-	public string Version { get; private set; } = string.Empty;
+	public string Name { get; private set; } = "???";
+	public string Description { get; private set; } = "No description.";
+	public string Author { get; private set; } = "???";
+	public string Version { get; private set; } = "???";
 	public string Url { get; private set; } = string.Empty;
 	public List<string> Requirements { get; private set; } = [];
 	public List<string> LoadAfterMods { get; private set; } = []; 
