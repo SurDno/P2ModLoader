@@ -19,9 +19,9 @@ namespace P2ModLoader.Patching.Assets {
 
             try {
                 manager = new AssetsManager();
-
+                manager.LoadClassPackage("Resources/classdata.tpk");
                 assetsFileInstance = manager.LoadAssetsFile(assetsFilePath);
-                manager.LoadClassDatabase("Resources/cldb_2018.4.6f1.dat");
+                manager.LoadClassDatabaseFromPackage(assetsFileInstance.file.Metadata.UnityVersion);
                 if (Path.GetFileName(assetsFilePath).Equals("resources.assets", StringComparison.OrdinalIgnoreCase))
                     ReadResourcePaths(Path.GetDirectoryName(Path.GetDirectoryName(assetsFilePath)));
             
@@ -108,7 +108,7 @@ namespace P2ModLoader.Patching.Assets {
         private static void ReadResourcePaths(string gamePath) {
             try {
                 var am = new AssetsManager();
-                am.LoadClassDatabase("Resources/cldb_2018.4.6f1.dat");
+                am.LoadClassPackage("Resources/classdata.tpk");
                 
                 var ggmPath = Path.Combine(SettingsHolder.SelectedInstall!.FullAssetsPath, "globalgamemanagers");
                 if (!File.Exists(ggmPath)) {
@@ -116,6 +116,8 @@ namespace P2ModLoader.Patching.Assets {
                     return;
                 }
                 
+                var assetsFileInstance = am.LoadAssetsFile(ggmPath);
+                am.LoadClassDatabaseFromPackage(assetsFileInstance.file.Metadata.UnityVersion);
                 var ggm = am.LoadAssetsFile(ggmPath);
                 
                 var resourceManagerAssets = ggm.file.GetAssetsOfType(AssetClassID.ResourceManager);
