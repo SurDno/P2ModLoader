@@ -9,12 +9,8 @@ namespace P2ModLoader.Forms.Tabs;
 
 public class InstallsTab : BaseTab {
     private ListView? _installsListView;
-    private Button? _locateButton;
-    private Button? _browseButton;
-    private Button? _removeButton;
-    private Button? _editLabelButton;
-    private Button? _openFolderButton;
-    private Button? _openGameLogButton;
+    private Button? _locateButton, _browseButton;
+    private Button? _removeButton, _editLabelButton,  _openFolderButton, _openGameLogButton;
     private ImageList? _imageList;
     private Image? _steamIcon;
 

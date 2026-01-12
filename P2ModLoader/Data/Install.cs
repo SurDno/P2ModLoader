@@ -1,11 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using P2ModLoader.Logging;
 using P2ModLoader.Patching.Xml;
 
 namespace P2ModLoader.Data;
 
 public class Install {
+    [AutoPerformanceLogHook(AttributeExclude = true)]
     public string Id { get; }
+    [AutoPerformanceLogHook(AttributeExclude = true)]
     public string InstallPath { get; set; }
     public Game Game { get; set; }
     public bool IsSteamInstall { get; set; }
