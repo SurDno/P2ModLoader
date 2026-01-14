@@ -6,7 +6,7 @@ using FileInstance = AssetsTools.NET.Extra.AssetsFileInstance;
 
 namespace P2ModLoader.Patching.Assets;
 
-public class AudioAssetHandler() : AssetTypeHandlerBase(AssetClassID.AudioClip, ".wav", ".ogg", ".mp3") {
+public sealed class AudioAssetHandler() : AssetTypeHandlerBase(AssetClassID.AudioClip, ".wav", ".ogg", ".mp3") {
 	public override bool Replace(AssetsManager am, FileInstance fileInst, AssetFileInfo assetInfo, byte[] data) {
 		try {
 			var baseField = am.GetBaseField(fileInst, assetInfo);
@@ -16,7 +16,7 @@ public class AudioAssetHandler() : AssetTypeHandlerBase(AssetClassID.AudioClip, 
 			var externalFilePath = Path.Combine(assetsDirectory, resourceFilename);
 
 			if (File.Exists(externalFilePath)) 
-				BackupManager.CreateBackup(externalFilePath);
+				BackupManager.CreateBackupOrTrack(externalFilePath);
 			
 
 			long newOffset;

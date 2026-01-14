@@ -6,7 +6,7 @@ using FileInstance = AssetsTools.NET.Extra.AssetsFileInstance;
 
 namespace P2ModLoader.Patching.Assets;
 
-public class TextAssetHandler() : AssetTypeHandlerBase(AssetClassID.TextAsset, ".bytes", ".txt") {
+public sealed class TextAssetHandler() : AssetTypeHandlerBase(AssetClassID.TextAsset, ".bytes", ".txt") {
 	public override bool Replace(AssetsManager am, FileInstance fileInst, AssetFileInfo assetInfo, byte[] data) {
 		try {
 			var baseField = am.GetBaseField(fileInst, assetInfo);
