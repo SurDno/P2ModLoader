@@ -60,13 +60,13 @@ public static class GamePatcher {
                 
             if (File.Exists(source)) {
                 if (!Path.GetExtension(source).Equals(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-                BackupManager.CreateBackup(target);
+                BackupManager.CreateBackupOrTrack(target);
                 _progressForm?.UpdateProgress($"Backing up: {Path.GetFileName(target)}");
                 File.Copy(source, target, true);
                 _progressForm?.UpdateProgress($"Copying for {mod.Info.Name}: {Path.GetFileName(target)}");
             } else if (Directory.Exists(source)) {
                 var assemblyPath = target + ".dll";
-                BackupManager.CreateBackup(assemblyPath);
+                BackupManager.CreateBackupOrTrack(assemblyPath);
                 _progressForm?.UpdateProgress($"Backing up assembly: {name}");
 
                 if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod))
@@ -99,7 +99,7 @@ public static class GamePatcher {
             var targetPath = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.AssetsPath, 
                 assetsFileName);
 
-            BackupManager.CreateBackup(targetPath);
+            BackupManager.CreateBackupOrTrack(targetPath);
             Logger.Log(LogLevel.Info, $"Backing up assets file: {targetPath}");
             _progressForm?.UpdateProgress($"Backing up assets file: {assetsFileName}");
 
@@ -120,12 +120,19 @@ public static class GamePatcher {
             var relPath = Path.GetRelativePath(modDataPath, xmlFile);
             var target = Path.Combine(SettingsHolder.InstallPath!, DATA_PATH, relPath);
             var possibleTargets = new[] {target, target + ".gz", target.Replace(".gz", "")}.Where(File.Exists).ToList();
+            
             if (possibleTargets.Count == 0) {
-                ErrorHandler.Handle($"No XML file found to override: {relPath}", null);
-                return false;
+                BackupManager.CreateBackupOrTrack(target);
+                Logger.Log(LogLevel.Info, $"Adding new XML file: {relPath}");
+                _progressForm?.UpdateProgress($"Adding new XML file {relPath} for mod {mod.Info.Name}");
+                
+                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                File.Copy(xmlFile, target, true);
+                continue;
             }
+            
             target = possibleTargets.First();
-            var backup =  BackupManager.CreateBackup(target);
+            var backup = BackupManager.CreateBackupOrTrack(target);
         
             _progressForm?.UpdateProgress($"Patching XML file {relPath} for mod {mod.Info.Name}");
 
