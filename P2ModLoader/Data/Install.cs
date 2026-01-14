@@ -59,6 +59,12 @@ public class Install {
         _ => null
     };
 
+    public string? PlayerLogName => Game switch {
+        Game.Pathologic2 => "output_log.txt",
+        Game.Pathologic3 or Game.Pathologic3Demo or Game.Pathologic3Quarantine => "Player.log",
+        _ => null
+    };
+
     [SuppressMessage("ReSharper", "SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault")]
     public uint SteamAppId {
         get {

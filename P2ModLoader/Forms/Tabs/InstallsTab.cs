@@ -3,6 +3,7 @@ using System.Reflection;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
+using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 
 namespace P2ModLoader.Forms.Tabs;
@@ -251,8 +252,9 @@ public class InstallsTab : BaseTab {
         }
 
         var logPath = Path.Combine(userProfile, "AppData", "LocalLow", "Ice-Pick Lodge",
-            install.GameAppDataName!, "Player.log");
+            install.GameAppDataName!, install.PlayerLogName!);
 
+        Logger.Log(LogLevel.Info, $"Opening log for {install.Game} at {logPath}.");
         if (!File.Exists(logPath)) {
             MessageBox.Show($"Game log file not found at:\n{logPath}\n\nThe game may not have been run yet.",
                 "Log Not Found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
