@@ -5,6 +5,7 @@ using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching.Assembly;
 using P2ModLoader.Patching.Assets;
+using P2ModLoader.Patching.Backups;
 using P2ModLoader.Patching.Xml;
 
 namespace P2ModLoader.Patching;
@@ -14,12 +15,12 @@ public static class GamePatcher {
     private static ProgressForm? _progressForm;
 
     public static bool TryPatch() { 	
-        using var form = _progressForm = new ProgressForm();
         try {
+            if (!BackupManager.TryRecoverBackups()) return false;
+            
+            using var form = _progressForm = new ProgressForm();
             _progressForm.Show();
             Application.DoEvents();
-
-            if (!BackupManager.TryRecoverBackups()) return false;
 
             var enabledMods = ModManager.Mods.Where(m => m.IsEnabled).ToList();
             EnabledModsTracker.SaveEnabledMods(enabledMods);
@@ -43,11 +44,10 @@ public static class GamePatcher {
 
             var managedPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.ManagedPath);
             var assetsPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.AssetsPath);
+            var dataPath = Path.Combine(mod.FolderPath, DATA_PATH);
 
             if (Directory.Exists(managedPath) && !TryProcessAssemblies(managedPath, mod)) return false;
             if (Directory.Exists(assetsPath) && !ProcessAssets(assetsPath, mod)) return false;
-            
-            var dataPath = Path.Combine(mod.FolderPath, DATA_PATH);
             if (Directory.Exists(dataPath) && !ProcessXmlData(dataPath, mod)) return false;
         }
         return true;
@@ -63,6 +63,7 @@ public static class GamePatcher {
                 BackupManager.CreateBackupOrTrack(target);
                 _progressForm?.UpdateProgress($"Backing up: {Path.GetFileName(target)}");
                 File.Copy(source, target, true);
+                BackupManager.SavePatchedFileHash(target);
                 _progressForm?.UpdateProgress($"Copying for {mod.Info.Name}: {Path.GetFileName(target)}");
             } else if (Directory.Exists(source)) {
                 var assemblyPath = target + ".dll";
@@ -71,6 +72,7 @@ public static class GamePatcher {
 
                 if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod))
                     return false;
+                BackupManager.SavePatchedFileHash(assemblyPath);
             }
         }
         return true;
@@ -90,23 +92,33 @@ public static class GamePatcher {
         return true;
     }
 
-    private static bool ProcessAssets(string modAssetsPath, Mod mod) { 	
+    private static bool ProcessAssets(string modAssetsPath, Mod mod) {
+        var assetsByFile = new Dictionary<string, List<string>>();
+    
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
             if (directory.EndsWith(SettingsHolder.SelectedInstall!.ManagedPath.TrimEnd('/'),
                     StringComparison.OrdinalIgnoreCase)) continue;
-
+    
             var assetsFileName = Path.GetFileName(directory);
-            var targetPath = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.AssetsPath, 
-                assetsFileName);
+            var targetPath = Path.Combine(SettingsHolder.InstallPath!, 
+                SettingsHolder.SelectedInstall!.AssetsPath, assetsFileName);
 
+            if (!assetsByFile.ContainsKey(targetPath))
+                assetsByFile[targetPath] = new List<string>();
+        
+            assetsByFile[targetPath].Add(directory);
+        }
+    
+        foreach (var (targetPath, modFolders) in assetsByFile) {
             BackupManager.CreateBackupOrTrack(targetPath);
             Logger.Log(LogLevel.Info, $"Backing up assets file: {targetPath}");
-            _progressForm?.UpdateProgress($"Backing up assets file: {assetsFileName}");
-
-            _progressForm?.UpdateProgress($"Updating assets file {assetsFileName} for mod {mod.Info.Name}");
-            if (AssetsFilePatcher.PatchAssetsFile(targetPath, directory)) continue;
-            ErrorHandler.Handle($"Failed to patch assets file {assetsFileName}", null);
-            return false;
+            _progressForm?.UpdateProgress($"Updating {Path.GetFileName(targetPath)} for mod {mod.Info.Name}");
+        
+            if (!AssetsFilePatcher.PatchAssetsFile(targetPath, modFolders)) {
+                ErrorHandler.Handle($"Failed to patch assets file {Path.GetFileName(targetPath)}", null);
+                return false;
+            }
+            BackupManager.SavePatchedFileHash(targetPath);
         }
         return true;
     }
@@ -128,6 +140,7 @@ public static class GamePatcher {
                 
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 File.Copy(xmlFile, target, true);
+                BackupManager.SavePatchedFileHash(target);
                 continue;
             }
             
@@ -140,6 +153,7 @@ public static class GamePatcher {
                 ErrorHandler.Handle($"Failed to patch XML file {relPath}", null);
                 return false;
             }
+            BackupManager.SavePatchedFileHash(target);
         }
         return true;
     }

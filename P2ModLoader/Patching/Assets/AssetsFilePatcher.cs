@@ -2,6 +2,7 @@ using AssetsTools.NET;
 using AssetsTools.NET.Extra;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
+using P2ModLoader.Patching.Backups;
 using FileInstance = AssetsTools.NET.Extra.AssetsFileInstance;
 
 namespace P2ModLoader.Patching.Assets {
