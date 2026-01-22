@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.ModList;
 
@@ -16,6 +17,7 @@ public static class FileConflictResolution {
     }
 
     private static bool AreCSharpFilesCompatible(string path1, string path2) { 	
+        Logger.Log(LogLevel.Info, $"Comparing files: {path1}, {path2}");
         var tree1 = CSharpSyntaxTree.ParseText(File.ReadAllText(path1));
         var tree2 = CSharpSyntaxTree.ParseText(File.ReadAllText(path2));
         

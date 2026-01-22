@@ -5,6 +5,7 @@ using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching;
+using P2ModLoader.Patching.Backups;
 using P2ModLoader.Update;
 using P2ModLoader.WindowsFormsExtensions;
 using AutoUpdater = P2ModLoader.Update.AutoUpdater;
