@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
@@ -16,8 +17,7 @@ public class InstallsTab : BaseTab {
     private Image? _steamIcon;
 
     private Install? SelectedInstall => _installsListView?.SelectedItems.Count > 0 
-        ? (Install)_installsListView.SelectedItems[0].Tag! 
-        : null;
+        ? (Install)_installsListView.SelectedItems[0].Tag! : null;
 
     public InstallsTab(TabPage page) : base(page) {
         InitializeComponents();
@@ -30,16 +30,42 @@ public class InstallsTab : BaseTab {
     protected sealed override void InitializeComponents() {
         _steamIcon = LoadImageFromResources("steam", "png");
 
-        var mainContainer = new TableLayoutPanel {
-            Dock = DockStyle.Fill,
-            RowCount = 3,
-            ColumnCount = 1
-        };
+        var mainContainer = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
         mainContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
         mainContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         mainContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
-        InitializeListView();
+        _installsListView = new ListView {
+            Dock = DockStyle.Fill,
+            View = View.Details,
+            SmallImageList = _imageList = new ImageList { ImageSize = new Size(32, 32) },
+            MultiSelect = false,
+            HeaderStyle = ColumnHeaderStyle.None,
+            ShowItemToolTips = true,
+            OwnerDraw = true
+        };
+
+        _installsListView.Columns.Add(string.Empty, -2);
+
+        _installsListView.SelectedIndexChanged += (_, _) => {
+            var hasSelection = SelectedInstall != null;
+            _editLabelButton!.Enabled = hasSelection;
+            _removeButton!.Enabled = hasSelection;
+            _openFolderButton!.Enabled = hasSelection;
+            _openGameLogButton!.Enabled = hasSelection && SelectedInstall!.GameAppDataName != null;
+        };
+        _installsListView.MouseClick += InstallsListView_MouseClick;
+        _installsListView.MouseDoubleClick += (_, e) => {
+            if (_installsListView!.GetItemAt(e.X, e.Y)?.Tag is Install install)
+                OpenFolder(install);
+        };
+        _installsListView.DrawSubItem += InstallsListView_DrawSubItem;
+        _installsListView.KeyDown += InstallsListView_KeyDown;
+        _installsListView.SizeChanged += (_, _) => {
+            _installsListView.BeginUpdate();
+            _installsListView.Columns[0].Width = -2;
+            _installsListView.EndUpdate();
+        };
 
         mainContainer.Controls.Add(CreateTopPanel(), 0, 0);
         mainContainer.Controls.Add(_installsListView, 0, 1);
@@ -48,7 +74,7 @@ public class InstallsTab : BaseTab {
         Tab.Controls.Add(mainContainer);
     }
 
-    private Panel CreateTopPanel() {
+    private TableLayoutPanel CreateTopPanel() {
         var panel = new TableLayoutPanel {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
@@ -84,7 +110,7 @@ public class InstallsTab : BaseTab {
         _openFolderButton = CreateButton("Open Folder", 125, (_, _) => OpenFolder(SelectedInstall!), false);
         _openGameLogButton = CreateButton("Open Game Log", 150, (_, _) => OpenGameLog(SelectedInstall!), false);
 
-        panel.Controls.AddRange(new Control[] { _editLabelButton, _removeButton, _openFolderButton, _openGameLogButton });
+        panel.Controls.AddRange([_editLabelButton, _removeButton, _openFolderButton, _openGameLogButton]);
         return panel;
     }
 
@@ -98,39 +124,8 @@ public class InstallsTab : BaseTab {
         button.Click += onClick;
         return button;
     }
-
-    private void InitializeListView() {
-        _imageList = new ImageList { ImageSize = new Size(32, 32) };
-
-        _installsListView = new ListView {
-            Dock = DockStyle.Fill,
-            View = View.Details,
-            SmallImageList = _imageList,
-            MultiSelect = false,
-            FullRowSelect = true,
-            HeaderStyle = ColumnHeaderStyle.None,
-            ShowItemToolTips = true,
-            OwnerDraw = true
-        };
-
-        _installsListView.Columns.Add("Game", -2);
-
-        _installsListView.SelectedIndexChanged += InstallsListView_SelectedIndexChanged;
-        _installsListView.MouseClick += InstallsListView_MouseClick;
-        _installsListView.MouseDoubleClick += (_, e) => {
-            if (_installsListView!.GetItemAt(e.X, e.Y)?.Tag is Install install)
-                OpenFolder(install);
-        };
-        _installsListView.DrawColumnHeader += (_, _) => { };
-        _installsListView.DrawSubItem += InstallsListView_DrawSubItem;
-        _installsListView.KeyDown += InstallsListView_KeyDown;
-        _installsListView.SizeChanged += (_, _) => {
-            _installsListView.BeginUpdate();
-            _installsListView.Columns[0].Width = -2;
-            _installsListView.EndUpdate();
-        };
-    }
-
+    
+    [SuppressMessage("ReSharper", "SwitchStatementMissingSomeEnumCasesNoDefault")]
     private void InstallsListView_KeyDown(object? sender, KeyEventArgs e) {
         if (SelectedInstall == null) return;
 
@@ -152,23 +147,18 @@ public class InstallsTab : BaseTab {
         e.Graphics.FillRectangle(e.Item.Selected ? SystemBrushes.Highlight : new SolidBrush(e.Item.BackColor), e.Bounds);
 
         var image = _imageList?.Images[e.Item.ImageKey];
-        if (image != null) {
-            var iconRect = new Rectangle(e.Bounds.Left + 2, e.Bounds.Top + 2, 32, 32);
-            e.Graphics.DrawImage(image, iconRect);
-        }
+        e.Graphics.DrawImage(image!, new Rectangle(e.Bounds.Left + 2, e.Bounds.Top + 2, 32, 32));
 
         var isActive = SettingsHolder.SelectedInstall?.Id == install.Id;
         var font = isActive ? new Font(e.Item.Font!, FontStyle.Bold) : e.Item.Font;
         var textColor = e.Item.Selected ? SystemColors.HighlightText : e.Item.ForeColor;
         var textRect = new Rectangle(e.Bounds.Left + 40, e.Bounds.Top, e.Bounds.Width - 80, e.Bounds.Height);
+        const TextFormatFlags textFormatFlags = TextFormatFlags.VerticalCenter | TextFormatFlags.Left;
+        
+        TextRenderer.DrawText(e.Graphics, e.Item.Text, font, textRect, textColor, textFormatFlags);
 
-        TextRenderer.DrawText(e.Graphics, e.Item.Text, font, textRect,
-            textColor, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
-
-        if (install.IsSteamInstall && _steamIcon != null) {
-            var steamRect = new Rectangle(e.Bounds.Right - 34, e.Bounds.Top, 30, 30);
-            e.Graphics.DrawImage(_steamIcon, steamRect);
-        }
+        if (install.IsSteamInstall && _steamIcon != null)
+            e.Graphics.DrawImage(_steamIcon, new Rectangle(e.Bounds.Right - 34, e.Bounds.Top, 30, 30));
     }
 
     private void LoadInstalls() {
@@ -178,10 +168,7 @@ public class InstallsTab : BaseTab {
         _imageList.Images.Clear();
 
         foreach (var install in SettingsHolder.Installs) {
-            var image = LoadImageFromResources(install.DisplayImage);
-            if (image != null) {
-                _imageList.Images.Add(install.Id, image);
-            }
+            _imageList.Images.Add(install.Id, LoadImageFromResources(install.DisplayImage)!);
 
             var item = new ListViewItem(install.DisplayName) {
                 Tag = install,
@@ -197,25 +184,12 @@ public class InstallsTab : BaseTab {
 
     private static Image? LoadImageFromResources(string imageName, string extension = "jpg") {
         try {
-            var assembly = Assembly.GetExecutingAssembly();
             var resourceName = $"P2ModLoader.Resources.{imageName}.{extension}";
-
-            using var stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream == null) return null;
-
-            return Image.FromStream(stream);
+            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
+            return stream == null ? null : Image.FromStream(stream);
         } catch {
             return null;
         }
-    }
-
-    private void InstallsListView_SelectedIndexChanged(object? sender, EventArgs e) {
-        var hasSelection = SelectedInstall != null;
-
-        _editLabelButton!.Enabled = hasSelection;
-        _removeButton!.Enabled = hasSelection;
-        _openFolderButton!.Enabled = hasSelection;
-        _openGameLogButton!.Enabled = hasSelection && SelectedInstall!.GameAppDataName != null;
     }
 
     private void InstallsListView_MouseClick(object? sender, MouseEventArgs e) {
@@ -245,13 +219,8 @@ public class InstallsTab : BaseTab {
 
     private static void OpenGameLog(Install install) {
         var userProfile = Environment.GetEnvironmentVariable("USERPROFILE");
-        if (string.IsNullOrEmpty(userProfile)) {
-            MessageBox.Show("Could not locate user profile directory.", "Error",
-                MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
-        }
-
-        var logPath = Path.Combine(userProfile, "AppData", "LocalLow", "Ice-Pick Lodge",
+        
+        var logPath = Path.Combine(userProfile!, "AppData/LocalLow/Ice-Pick Lodge",
             install.GameAppDataName!, install.PlayerLogName!);
 
         Logger.Log(LogLevel.Info, $"Opening log for {install.Game} at {logPath}.");

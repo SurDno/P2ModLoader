@@ -18,8 +18,6 @@ public class Mod {
 		FolderPath = folderPath;
 		var infoPath = Path.Combine(folderPath, "ModInfo.ltx");
 		Info = ModInfo.FromFile(infoPath);
-		IsEnabled = false;
-		LoadOrder = 0;
 	}
 	
 	public bool IsCompatibleWith(Install install) => Info.Games.Contains(install.Game);
