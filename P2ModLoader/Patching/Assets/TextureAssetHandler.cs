@@ -33,6 +33,15 @@ namespace P2ModLoader.Patching.Assets {
                 textureFile.m_TextureFormat = (int)TextureFormat.RGBA32;
                 textureFile.m_CompleteImageSize = rgbaData.Length;
                 textureFile.pictureData = rgbaData;
+                textureFile.m_MipCount = 1;
+                textureFile.m_TextureDimension = 2;
+                textureFile.m_TextureSettings.m_FilterMode = 1;
+                textureFile.m_TextureSettings.m_WrapU = 1;
+                textureFile.m_TextureSettings.m_WrapV = 1;
+                textureFile.m_TextureSettings.m_WrapW = 1;
+                textureFile.m_TextureSettings.m_Aniso = 1;
+                textureFile.m_ImageCount = 1;
+                textureFile.m_IsReadable = true;
                 
                 bitmap.Dispose();
                 
