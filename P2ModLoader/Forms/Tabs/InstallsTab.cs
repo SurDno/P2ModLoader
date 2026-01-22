@@ -341,7 +341,7 @@ public class InstallsTab : BaseTab {
         using var input = new Form {
             Text = "Edit Label",
             Width = 350,
-            Height = 150,
+            Height = 200,
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false,
@@ -350,22 +350,23 @@ public class InstallsTab : BaseTab {
 
         var textBox = new TextBox {
             Text = install.CustomLabel,
-            Location = new Point(20, 45),
-            Width = 290
+            Location = new Point(10, 45),
+            Width = 310
         };
 
         var okButton = new Button {
             Text = "OK",
             DialogResult = DialogResult.OK,
-            Location = new Point(135, 75),
-            Width = 80
+            Location = new Point(135, 90),
+            Width = 80,
+            Height = 35
         };
 
         input.Controls.AddRange([
-            new Label { Text = "Custom Label:", Location = new Point(20, 20), AutoSize = true },
+            new Label { Text = "Custom Label:", Location = new Point(10, 20), AutoSize = true },
             textBox,
             okButton,
-            new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(225, 75), Width = 80 }
+            new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(225, 90), Width = 80, Height = 35 }
         ]);
 
         input.AcceptButton = okButton;
