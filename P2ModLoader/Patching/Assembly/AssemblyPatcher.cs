@@ -358,21 +358,65 @@ public static class AssemblyPatcher {
             PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
         }
 
-        foreach (var methodName in methods.Select(m => m.Identifier.Text)) {
-            var newMethod = newType.Methods.FirstOrDefault(m => m.Name == methodName);
-            var originalMethod = originalType.Methods.FirstOrDefault(m => m.Name == methodName);
 
-            if (newMethod == null) {
-                Logger.Log(LogLevel.Warning, $"Could not find method {methodName} in the compiled assembly");
-                continue;
-            }
+        foreach (var methodSyntax in methods) {
+            string methodName;
+            bool isExplicitImpl = methodSyntax.ExplicitInterfaceSpecifier != null;
 
-            if (originalMethod == null) {
-                originalType.Methods.Add(MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule));
-                Logger.Log(LogLevel.Info, $"Added new method {methodName} to type {fullTypeName}");
+            if (isExplicitImpl) {
+                var interfaceName = methodSyntax.ExplicitInterfaceSpecifier.Name.ToString();
+                var simpleName = methodSyntax.Identifier.Text;
+
+                var paramTypes = methodSyntax.ParameterList.Parameters
+                    .Select(p => p.Type.ToString())
+                    .ToList();
+
+                var newMethod = newType.Methods.FirstOrDefault(m =>
+                    m.Name.EndsWith($".{simpleName}") &&
+                    m.Parameters.Count == paramTypes.Count &&
+                    m.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(
+                        paramTypes.Select(pt => pt.Split('.').Last())
+                    )
+                );
+
+                var originalMethod = originalType.Methods.FirstOrDefault(m =>
+                    m.Name.EndsWith($".{simpleName}") &&
+                    m.Parameters.Count == paramTypes.Count &&
+                    m.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(
+                        paramTypes.Select(pt => pt.Split('.').Last())
+                    )
+                );
+
+                if (newMethod == null) {
+                    Logger.Log(LogLevel.Warning,
+                        $"Could not find explicit method {interfaceName}.{simpleName} in the compiled assembly");
+                    continue;
+                }
+
+                if (originalMethod == null) {
+                    originalType.Methods.Add(MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule));
+                    Logger.Log(LogLevel.Info, $"Added new method {newMethod.Name} to type {fullTypeName}");
+                } else {
+                    MethodCloner.ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
+                    Logger.Log(LogLevel.Info, $"Replaced method {originalMethod.Name} in type {fullTypeName}");
+                }
             } else {
-                MethodCloner.ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
-                Logger.Log(LogLevel.Info, $"Replaced method {methodName} in type {fullTypeName}");
+                methodName = methodSyntax.Identifier.Text;
+                var newMethod = newType.Methods.FirstOrDefault(m => m.Name == methodName);
+                var originalMethod = originalType.Methods.FirstOrDefault(m => m.Name == methodName);
+
+                if (newMethod == null) {
+                    Logger.Log(LogLevel.Warning, $"Could not find method {methodName} in the compiled assembly");
+                    continue;
+                }
+
+                if (originalMethod == null) {
+                    originalType.Methods.Add(MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule));
+                    Logger.Log(LogLevel.Info, $"Added new method {methodName} to type {fullTypeName}");
+                } else {
+                    MethodCloner.ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
+                    Logger.Log(LogLevel.Info, $"Replaced method {methodName} in type {fullTypeName}");
+                }
             }
         }
 
