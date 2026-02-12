@@ -45,6 +45,7 @@ internal static class Program {
         }
 
         Logger.Log(LogLevel.Trace, $"Starting P2ModLoader...");
+        Application.SetHighDpiMode(HighDpiMode.DpiUnaware);
         SettingsSaver.LoadSettings();
         Application.Run(new MainForm());
     }
