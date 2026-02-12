@@ -1,6 +1,5 @@
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
-using P2ModLoader.ModList;
 
 namespace P2ModLoader.Patching.Backups;
 

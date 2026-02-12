@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using P2ModLoader.Helper;
 
 namespace P2ModLoader.Forms;
 
@@ -8,6 +9,7 @@ public class ProgressForm : Form {
 	private readonly Label _titleLabel;
 
 	public ProgressForm() { 	
+		Icon = AppIcon.Instance;
 		Width = 800;
 		Height = 200;
 		FormBorderStyle = FormBorderStyle.FixedDialog;

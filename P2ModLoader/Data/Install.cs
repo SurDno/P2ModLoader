@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using P2ModLoader.Logging;
-using P2ModLoader.Patching.Xml;
 
 namespace P2ModLoader.Data;
 

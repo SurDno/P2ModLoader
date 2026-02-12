@@ -1,3 +1,5 @@
+using P2ModLoader.Helper;
+
 namespace P2ModLoader.Forms;
 
 public sealed class ProfileEditDialog : Form {
@@ -6,7 +8,8 @@ public sealed class ProfileEditDialog : Form {
 	private const byte BACKSPACE = 8;
 	public string? UniqueName { get; private set; }
 
-	public ProfileEditDialog(string prefix, string currentUniqueName) { 	
+	public ProfileEditDialog(string prefix, string currentUniqueName) { 
+		Icon = AppIcon.Instance;	
 		Text = "Edit Profile Name";
 		FormBorderStyle = FormBorderStyle.FixedDialog;
 		MaximizeBox = false;

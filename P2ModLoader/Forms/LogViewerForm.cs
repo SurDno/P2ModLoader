@@ -1,3 +1,4 @@
+using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 
 namespace P2ModLoader.Forms;
@@ -6,6 +7,7 @@ public sealed class LogViewerForm : Form {
 	private readonly TextBox _logTextBox;
 
 	public LogViewerForm() {
+		Icon = AppIcon.Instance;
 		Text = "P2ModLoader Logs";
 		Size = new Size(1800, 600);
 

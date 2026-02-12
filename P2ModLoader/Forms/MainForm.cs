@@ -23,7 +23,8 @@ public class MainForm : Form {
     private LogViewerForm? _logViewerForm;
     private ComboBox? _installSelector;
     
-    public MainForm() { 	
+    public MainForm() {
+        Icon = AppIcon.Instance;
         InitializeTabs();
         Load += MainForm_Load!;
     }
