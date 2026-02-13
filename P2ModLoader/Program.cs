@@ -9,8 +9,10 @@ namespace P2ModLoader;
 internal static class Program {
     [STAThread]
     private static void Main() {
+        Logger.Log(LogLevel.Info, $"Starting P2ModLoader...");
         ApplicationConfiguration.Initialize();
         
+        Logger.Log(LogLevel.Info, $"Testing write permissions...");
         if (!IsRunningAsAdmin() && !CanWriteToAppDirectory()) {
             var result = MessageBox.Show(
                 "P2ModLoader needs to write files to its installation directory but doesn't have sufficient " +
@@ -43,9 +45,9 @@ internal static class Program {
                 }
             }
         }
-
-        Logger.Log(LogLevel.Trace, $"Starting P2ModLoader...");
+        
         Application.SetHighDpiMode(HighDpiMode.DpiUnaware);
+        Logger.Log(LogLevel.Info, $"Loading settings...");
         SettingsSaver.LoadSettings();
         Application.Run(new MainForm());
     }

@@ -8,7 +8,7 @@ using FileInstance = AssetsTools.NET.Extra.AssetsFileInstance;
 namespace P2ModLoader.Patching.Assets;
 
 public static class AssetsFilePatcher {
-    private static readonly List<(long pathId, string path)> ResourcePaths = new();
+    private static readonly List<(long pathId, string path)> ResourcePaths = [];
     private static readonly List<AssetTypeHandlerBase> AssetHandlers =
         [new TextAssetHandler(), new AudioAssetHandler(), new TextureAssetHandler()];
     

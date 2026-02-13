@@ -10,7 +10,7 @@ public static class Logger {
     private static string? _lastInstallLogPath;
     
     public static event Action<string>? LogMessageAdded;
-    private static readonly List<string> _logMessages = new();
+    private static readonly List<string> _logMessages = [];
 
     static Logger() {
         var logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");

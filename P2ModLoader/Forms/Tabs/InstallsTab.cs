@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using P2ModLoader.Abstract;
 using P2ModLoader.Data;
 using P2ModLoader.Helper;
@@ -28,7 +27,7 @@ public class InstallsTab : BaseTab {
     }
 
     protected sealed override void InitializeComponents() {
-        _steamIcon = LoadImageFromResources("steam", "png");
+        _steamIcon = ResourcesLoader.LoadImage("steam", "png");
 
         var mainContainer = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 3, ColumnCount = 1 };
         mainContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
@@ -168,7 +167,7 @@ public class InstallsTab : BaseTab {
         _imageList.Images.Clear();
 
         foreach (var install in SettingsHolder.Installs) {
-            _imageList.Images.Add(install.Id, LoadImageFromResources(install.DisplayImage)!);
+            _imageList.Images.Add(install.Id, ResourcesLoader.LoadImage(install.DisplayImage)!);
 
             var item = new ListViewItem(install.DisplayName) {
                 Tag = install,
@@ -180,16 +179,6 @@ public class InstallsTab : BaseTab {
         }
 
         _installsListView.Refresh();
-    }
-
-    private static Image? LoadImageFromResources(string imageName, string extension = "jpg") {
-        try {
-            var resourceName = $"P2ModLoader.Resources.{imageName}.{extension}";
-            using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName);
-            return stream == null ? null : Image.FromStream(stream);
-        } catch {
-            return null;
-        }
     }
 
     private void InstallsListView_MouseClick(object? sender, MouseEventArgs e) {

@@ -1,11 +1,9 @@
-using System.Reflection;
 using P2ModLoader.Data;
 using P2ModLoader.Forms.Tabs;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.ModList;
 using P2ModLoader.Patching;
-using P2ModLoader.Patching.Backups;
 using P2ModLoader.Update;
 using P2ModLoader.WindowsFormsExtensions;
 using AutoUpdater = P2ModLoader.Update.AutoUpdater;
@@ -147,20 +145,6 @@ public class MainForm : Form {
         Logger.LogMessageAdded += OnLogMessageAdded;
     }
 
-    private static Image? LoadImageFromResources(string imageName) {
-        try {
-            var assembly = Assembly.GetExecutingAssembly();
-            var resourceName = $"P2ModLoader.Resources.{imageName}.jpg";
-        
-            using var stream = assembly.GetManifestResourceStream(resourceName);
-            if (stream == null) return null;
-        
-            return Image.FromStream(stream);
-        } catch {
-            return null;
-        }
-    }
-
     private Panel CreateInstallSelectorPanel() {
         var panel = new Panel {
             Dock = DockStyle.Fill,
@@ -178,7 +162,7 @@ public class MainForm : Form {
             Width = 350,
             Height = 16,
             DisplayMember = "DisplayName",
-            GetImageForItem = item => item is Install install ? LoadImageFromResources(install.DisplayImage) : null
+            GetImageForItem = item => item is Install install ? ResourcesLoader.LoadImage(install.DisplayImage) : null
         };
 
         _installSelector.SelectedIndexChanged += (_, _) => {

@@ -141,7 +141,7 @@ public static class InstallationLocator {
     }
 
     private static List<string> GetSteamLibraryPaths(string libraryFoldersPath) {
-        List<string> paths = new();
+        List<string> paths = [];
         var content = File.ReadAllText(libraryFoldersPath);
         
         var pathRegex = new Regex(@"""path""\s+""([^""]+)""");
