@@ -196,14 +196,24 @@ public static class BackupManager {
 		}
 	}
 
+	public static void DeleteBackupIfExists(string? backupPath) {
+		if (backupPath == null || !File.Exists(backupPath)) return;
+		File.Delete(backupPath);
+		
+		var directory = Path.GetDirectoryName(backupPath)!;
+		while (Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any()) {
+			Directory.Delete(directory, false);
+			directory = Path.GetDirectoryName(directory);
+		}
+		Logger.Log(LogLevel.Debug, $"Deleted incomplete backup: {Path.GetFileName(backupPath)}");
+	}
+	
 	private static void CleanupBackupFolder() {
 		if (!Directory.Exists(BackupFolderPath)) return;
 
 		try {
-			if (!Directory.EnumerateFileSystemEntries(BackupFolderPath).Any()) {
-				Directory.Delete(BackupFolderPath, false);
-				Logger.Log(LogLevel.Info, $"Removed empty backup folder");
-			}
+			Directory.Delete(BackupFolderPath, true);
+			Logger.Log(LogLevel.Info, $"Removed empty backup folder");
 		} catch (Exception ex) {
 			Logger.Log(LogLevel.Warning, $"Could not remove backup folder: {ex.Message}");
 		}

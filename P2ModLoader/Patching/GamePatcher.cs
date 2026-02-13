@@ -60,19 +60,29 @@ public static class GamePatcher {
                 
             if (File.Exists(source)) {
                 if (!Path.GetExtension(source).Equals(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-                BackupManager.CreateBackupOrTrack(target);
+                var backup = BackupManager.CreateBackupOrTrack(target);
                 _progressForm?.UpdateProgress($"Backing up: {Path.GetFileName(target)}");
-                File.Copy(source, target, true);
-                BackupManager.SavePatchedFileHash(target);
+                try {
+                    File.Copy(source, target, true);
+                    BackupManager.SavePatchedFileHash(target);
+                } catch {
+                    BackupManager.DeleteBackupIfExists(backup);
+                    throw;
+                }
                 _progressForm?.UpdateProgress($"Copying for {mod.Info.Name}: {Path.GetFileName(target)}");
             } else if (Directory.Exists(source)) {
                 var assemblyPath = target + ".dll";
-                BackupManager.CreateBackupOrTrack(assemblyPath);
-                _progressForm?.UpdateProgress($"Backing up assembly: {name}");
-
-                if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod))
-                    return false;
-                BackupManager.SavePatchedFileHash(assemblyPath);
+                var backup = BackupManager.CreateBackupOrTrack(assemblyPath);
+                try {
+                    if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod)) {
+                        BackupManager.DeleteBackupIfExists(backup);
+                        return false;
+                    }
+                    BackupManager.SavePatchedFileHash(assemblyPath);
+                } catch {
+                    BackupManager.DeleteBackupIfExists(backup);
+                    throw;
+                }
             }
         }
         return true;
@@ -96,34 +106,41 @@ public static class GamePatcher {
 
     private static bool ProcessAssets(string modAssetsPath, Mod mod) {
         var assetsByFile = new Dictionary<string, List<string>>();
-    
+
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
             if (directory.EndsWith(SettingsHolder.SelectedInstall!.ManagedPath.TrimEnd('/'),
                     StringComparison.OrdinalIgnoreCase)) continue;
-    
+
             var assetsFileName = Path.GetFileName(directory);
             var targetPath = Path.Combine(SettingsHolder.InstallPath!, 
                 SettingsHolder.SelectedInstall!.AssetsPath, assetsFileName);
 
             if (!assetsByFile.ContainsKey(targetPath))
                 assetsByFile[targetPath] = [];
-        
+    
             assetsByFile[targetPath].Add(directory);
         }
-    
+
         foreach (var (targetPath, modFolders) in assetsByFile) {
-            BackupManager.CreateBackupOrTrack(targetPath);
+            var backup = BackupManager.CreateBackupOrTrack(targetPath);
             Logger.Log(LogLevel.Info, $"Backing up assets file: {targetPath}");
             _progressForm?.UpdateProgress($"Updating {Path.GetFileName(targetPath)} for mod {mod.Info.Name}");
-        
-            if (!AssetsFilePatcher.PatchAssetsFile(targetPath, modFolders)) {
-                ErrorHandler.Handle($"Failed to patch assets file {Path.GetFileName(targetPath)}", null);
-                return false;
+    
+            try {
+                if (!AssetsFilePatcher.PatchAssetsFile(targetPath, modFolders)) {
+                    BackupManager.DeleteBackupIfExists(backup);
+                    ErrorHandler.Handle($"Failed to patch assets file {Path.GetFileName(targetPath)}", null);
+                    return false;
+                }
+                BackupManager.SavePatchedFileHash(targetPath);
+            } catch {
+                BackupManager.DeleteBackupIfExists(backup);
+                throw;
             }
-            BackupManager.SavePatchedFileHash(targetPath);
         }
         return true;
     }
+
 
     private static bool ProcessXmlData(string modDataPath, Mod mod) { 	
         var xmlFiles = Directory.GetFiles(modDataPath, "*.*", SearchOption.AllDirectories)
@@ -134,28 +151,39 @@ public static class GamePatcher {
             var relPath = Path.GetRelativePath(modDataPath, xmlFile);
             var target = Path.Combine(SettingsHolder.InstallPath!, DATA_PATH, relPath);
             var possibleTargets = new[] {target, target + ".gz", target.Replace(".gz", "")}.Where(File.Exists).ToList();
-            
+        
             if (possibleTargets.Count == 0) {
-                BackupManager.CreateBackupOrTrack(target);
+                var backup = BackupManager.CreateBackupOrTrack(target);
                 Logger.Log(LogLevel.Info, $"Adding new XML file: {relPath}");
                 _progressForm?.UpdateProgress($"Adding new XML file {relPath} for mod {mod.Info.Name}");
-                
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                File.Copy(xmlFile, target, true);
-                BackupManager.SavePatchedFileHash(target);
+            
+                try {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                    File.Copy(xmlFile, target, true);
+                    BackupManager.SavePatchedFileHash(target);
+                } catch {
+                    BackupManager.DeleteBackupIfExists(backup);
+                    throw;
+                }
                 continue;
             }
-            
-            target = possibleTargets.First();
-            var backup = BackupManager.CreateBackupOrTrack(target);
         
+            target = possibleTargets.First();
+            var backup2 = BackupManager.CreateBackupOrTrack(target);
+    
             _progressForm?.UpdateProgress($"Patching XML file {relPath} for mod {mod.Info.Name}");
 
-            if (!XmlPatcher.PatchXml(backup, xmlFile, target)) {
-                ErrorHandler.Handle($"Failed to patch XML file {relPath}", null);
-                return false;
+            try {
+                if (!XmlPatcher.PatchXml(backup2, xmlFile, target)) {
+                    BackupManager.DeleteBackupIfExists(backup2);
+                    ErrorHandler.Handle($"Failed to patch XML file {relPath}", null);
+                    return false;
+                }
+                BackupManager.SavePatchedFileHash(target);
+            } catch {
+                BackupManager.DeleteBackupIfExists(backup2);
+                throw;
             }
-            BackupManager.SavePatchedFileHash(target);
         }
         return true;
     }
