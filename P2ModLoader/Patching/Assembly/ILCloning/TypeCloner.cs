@@ -1,4 +1,5 @@
 using Mono.Cecil;
+using P2ModLoader.Logging;
 
 namespace P2ModLoader.Patching.Assembly.ILCloning;
 
@@ -32,7 +33,10 @@ public static class TypeCloner {
 
         foreach (var nestedType in src.NestedTypes)
             newType.NestedTypes.Add(CloneType(nestedType, targetModule));
-
+        
+        foreach (var m in newType.NestedTypes.SelectMany(t => t.Methods))
+            Logger.Log(LogLevel.Info, $"{m.Name} overrides: {m.Overrides.Count}");
+        
         return newType;
     }
 }

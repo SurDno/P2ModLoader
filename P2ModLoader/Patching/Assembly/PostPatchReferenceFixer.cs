@@ -41,7 +41,7 @@ public static class PostPatchReferenceFixer {
                         if (tRef.Scope?.Name == tempAsm && tRef.FullName == type.FullName) {
                             instruction.Operand = module.ImportReference(type);
                             Logger.Log(LogLevel.Debug,
-                                $"Fixed TypeReference operand at IL offset {instruction.Offset} to '{type.FullName}'");
+                                $"Fixed TypeReference operand at in type {type.DeclaringType?.FullName} to '{type.FullName}'");
                         }
                         break;
                     case GenericInstanceMethod oldGim:
@@ -58,7 +58,7 @@ public static class PostPatchReferenceFixer {
                             var localMethod = FindLocalMethod(type, mRef);
                             if (localMethod != null) {
                                 instruction.Operand = module.ImportReference(localMethod);
-                                Logger.Log(LogLevel.Debug, $"Fixed MethodReference at IL offset {instruction.Offset}" +
+                                Logger.Log(LogLevel.Debug, $"Fixed MethodReference in type {localMethod.DeclaringType.FullName}" +
                                                            $" to local method '{localMethod.Name}'");
                             } else {
                                 var localTypeRef = module.ImportReference(type);
@@ -73,7 +73,7 @@ public static class PostPatchReferenceFixer {
                             var localField = type.Fields.FirstOrDefault(f => f.Name == fRef.Name);
                             if (localField != null) {
                                 instruction.Operand = module.ImportReference(localField);
-                                Logger.Log(LogLevel.Debug, $"Fixed FieldReference at IL offset {instruction.Offset}" +
+                                Logger.Log(LogLevel.Debug, $"Fixed FieldReference in type {localField.DeclaringType.FullName}" +
                                                            $" to local field '{localField.Name}'");
                             } else {
                                 fRef.DeclaringType = module.ImportReference(type);

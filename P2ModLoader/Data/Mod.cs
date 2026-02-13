@@ -8,17 +8,41 @@ public class Mod {
 	public string FolderName => new DirectoryInfo(FolderPath.TrimEnd('/')).Name;
 	public bool IsEnabled { get; set; }
 	public int LoadOrder { get; set; }
-	
+	public ModOptions? Options { get; private set; }
+	public Dictionary<string, object?> OptionValues { get; set; } = new();
+
 	public string? DependencyError {
 		set => _dependencyError = value;
 		get => string.IsNullOrEmpty(_dependencyError) ? "" : $"\r\nDependency error: {_dependencyError}";
 	}
 
-	public Mod(string folderPath) { 	
+	public Mod(string folderPath) {
 		FolderPath = folderPath;
 		var infoPath = Path.Combine(folderPath, "ModInfo.ltx");
 		Info = ModInfo.FromFile(infoPath);
+    
+		var optionsPath = Path.Combine(folderPath, "ModOptions.json");
+		if (!File.Exists(optionsPath)) return;
+		Options = ModOptions.FromFile(optionsPath); 
+		InitializeOptionValues();
 	}
+
+	private void InitializeOptionValues() {
+		if (Options == null) return;
+    
+		foreach (var category in Options.Categories) {
+			foreach (var option in category.Options) {
+				if (!OptionValues.TryGetValue(option.Name, out var value)) {
+					OptionValues[option.Name] = option.DefaultValue;
+					option.CurrentValue = option.DefaultValue;
+				} else {
+					option.CurrentValue = value;
+				}
+			}
+		}
+	}
+	
+	public bool HasOptions => Options?.Categories.Any(c => c.Options.Count > 0) ?? false;
 	
 	public bool IsCompatibleWith(Install install) => Info.Games.Contains(install.Game);
 

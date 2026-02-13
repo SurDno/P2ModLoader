@@ -83,12 +83,14 @@ public static class GamePatcher {
         var loadFirstFiles = mod.Info.LoadFirst.Select(f => Path.Combine(directory, f)).Where(File.Exists).ToList();
         codeFiles = loadFirstFiles.Concat(codeFiles.Except(loadFirstFiles)).ToList();
 
-        foreach (var file in codeFiles) {
+        for (var index = 0; index < codeFiles.Count; index++) {
+            var file = codeFiles[index];
             _progressForm?.UpdateProgress($"Patching {mod.Info.Name}: {Path.GetFileName(file)}");
-            if (AssemblyPatcher.PatchAssembly(assemblyPath, file)) continue;
+            if (AssemblyPatcher.PatchAssembly(assemblyPath, file, mod)) continue;
             ErrorHandler.Handle($"Failed to patch file: {file}", null);
             return false;
         }
+
         return true;
     }
 
@@ -104,7 +106,7 @@ public static class GamePatcher {
                 SettingsHolder.SelectedInstall!.AssetsPath, assetsFileName);
 
             if (!assetsByFile.ContainsKey(targetPath))
-                assetsByFile[targetPath] = new List<string>();
+                assetsByFile[targetPath] = [];
         
             assetsByFile[targetPath].Add(directory);
         }

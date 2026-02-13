@@ -16,6 +16,7 @@ public class ModsTab : BaseTab {
     private Button? _initializeButton;
     private bool _isRefreshingUI;
     private bool _suppressEvents;
+    private Button? _optionsButton;
 
     public event Action? ModsChanged;
 
@@ -225,20 +226,6 @@ public class ModsTab : BaseTab {
             SettingsSaver.UnpauseSaving();
         };
 
-        var enableAllButton = new Button {
-            Text = "Enable All",
-            Width = 100,
-            Height = 35
-        };
-        enableAllButton.Click += (_, _) => SetAllModsChecked(true);
-
-        var disableAllButton = new Button {
-            Text = "Disable All",
-            Width = 110,
-            Height = 35
-        };
-        disableAllButton.Click += (_, _) => SetAllModsChecked(false);
-
         var openModsFolderButton = new Button {
             Text = "To Mods folder",
             Width = 150,
@@ -248,7 +235,14 @@ public class ModsTab : BaseTab {
             var mods = Path.Join(SettingsHolder.InstallPath, "Mods");
             Process.Start("explorer.exe", mods);
         };
-
+        _optionsButton = new Button {
+            Text = "Configure Mod",
+            Width = 180,
+            Height = 35,
+            Enabled = false
+        };
+        _optionsButton.Click += OptionsButton_Click;
+        
         _descriptionBox = new NoCaretTextBox {
             Dock = DockStyle.Fill,
             Multiline = true,
@@ -260,37 +254,26 @@ public class ModsTab : BaseTab {
         };
 
         buttonPanel.Controls.Add(refreshButton);
-        buttonPanel.Controls.Add(disableAllButton);
-        buttonPanel.Controls.Add(enableAllButton);
         buttonPanel.Controls.Add(openModsFolderButton);
+        buttonPanel.Controls.Add(_optionsButton);
         descriptionContainer.Controls.Add(buttonPanel, 0, 0);
         descriptionContainer.Controls.Add(_descriptionBox, 0, 1);
 
         return descriptionContainer;
     }
 
-    private void SetAllModsChecked(bool value) { 	
-        if (_modListView == null || _isRefreshingUI) return;
+    private void OptionsButton_Click(object? sender, EventArgs e) {
+        if (_modListView?.SelectedItems.Count != 1) return;
+    
+        var mod = (Mod)_modListView.SelectedItems[0].Tag!;
+        if (!mod.HasOptions) return;
 
-        try {
-            _isRefreshingUI = true;
-            _suppressEvents = true;
-
-            foreach (ListViewItem item in _modListView.Items) {
-                if (item.Tag is not Mod mod) continue;
-                mod.IsEnabled = value;
-                item.Checked = value;
-            }
-
-            SettingsHolder.UpdateModState(ModManager.Mods);
+        using var optionsForm = new ModOptionsForm(mod);
+        if (optionsForm.ShowDialog() == DialogResult.OK) {
             ModsChanged?.Invoke();
-            RefreshModList();
-        } finally {
-            _isRefreshingUI = false;
-            _suppressEvents = false;
         }
     }
-    
+
     private void InitializeButton_Click(object? sender, EventArgs e) { 	
         var installPath = SettingsHolder.InstallPath;
         if (string.IsNullOrEmpty(installPath)) return;
@@ -375,10 +358,11 @@ public class ModsTab : BaseTab {
         _modListView!.MouseClick += ModListView_MouseClick;
     }
 
-    private void ModListView_SelectedIndexChanged(object? sender, EventArgs e) { 	
+    private void ModListView_SelectedIndexChanged(object? sender, EventArgs e) {
         if (_modListView!.SelectedItems.Count == 0) {
             _descriptionBox!.Text = string.Empty;
             _descriptionBox!.ForeColor = Color.Gray;
+            _optionsButton!.Enabled = false;
             return;
         }
 
@@ -389,6 +373,8 @@ public class ModsTab : BaseTab {
         _descriptionBox!.Text =
             $"{mod.Info.Description}\r\n{modificationInfo}\r\n{display.ToolTip}{mod.DependencyError}";
         _descriptionBox!.ForeColor = SystemColors.WindowText;
+    
+        _optionsButton!.Enabled = mod.HasOptions;
     }
 
     private void ModListView_MouseClick(object? sender, MouseEventArgs e) { 	
@@ -411,6 +397,17 @@ public class ModsTab : BaseTab {
             contextMenu.Items.Add(openUrlItem);
         }
 
+        if (mod!.HasOptions) {
+            var optionsItem = new ToolStripMenuItem("Options");
+            optionsItem.Click += (_, _) => {
+                using var optionsForm = new ModOptionsForm(mod);
+                if (optionsForm.ShowDialog() == DialogResult.OK) {
+                    ModsChanged?.Invoke();
+                }
+            };
+            contextMenu.Items.Add(optionsItem);
+        }
+        
         var openFolderItem = new ToolStripMenuItem("Open folder");
         openFolderItem.Click += (_, _) => { Process.Start("explorer.exe", mod.FolderPath); };
         contextMenu.Items.Add(openFolderItem);

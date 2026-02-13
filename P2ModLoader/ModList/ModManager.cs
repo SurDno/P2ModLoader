@@ -61,6 +61,14 @@ public static class ModManager {
             if (savedMod != null) {
                 mod.IsEnabled = savedMod.IsEnabled;
                 mod.LoadOrder = savedMod.LoadOrder;
+                mod.OptionValues = new Dictionary<string, object?>(savedMod.OptionValues);
+    
+                if (mod.Options != null) {
+                    foreach (var option in mod.Options.Categories.SelectMany(c => c.Options)) {
+                        if (!mod.OptionValues.TryGetValue(option.Name, out var value)) continue;
+                        option.CurrentValue = value;
+                    }
+                }
             }
             
             _allMods.Add(mod);

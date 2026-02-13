@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Mono.Cecil;
+using P2ModLoader.Data;
 using P2ModLoader.Helper;
 using P2ModLoader.Logging;
 using P2ModLoader.Patching.Assembly.ILCloning;
@@ -15,24 +16,27 @@ using LanguageVersion = Microsoft.CodeAnalysis.CSharp.LanguageVersion;
 namespace P2ModLoader.Patching.Assembly;
 
 public static class AssemblyPatcher {
-    public static bool PatchAssembly(string dllPath, string updatedSourcePath) { 	
+    public static bool PatchAssembly(string dllPath, string updatedSourcePath, Mod mod) { 	
         var dllDirectory = Path.GetDirectoryName(Path.GetFullPath(dllPath))!;
-        var fileCopy = Path.Combine(dllDirectory, $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
-        File.Copy(dllPath, fileCopy, true);
-        var backupPath = dllPath + ".backup";
+        var workingCopy = Path.Combine(dllDirectory, $"{Path.GetFileNameWithoutExtension(dllPath)}Temp.dll");
+        File.Copy(dllPath, workingCopy, true);
         
         try {
             var references = ReferenceCollector.CollectReferences(dllDirectory!, dllPath);
 
-            var updatedSource = File.ReadAllText(updatedSourcePath);
-            var modTree = CSharpSyntaxTree.ParseText(updatedSource, new CSharpParseOptions(LanguageVersion.Latest));
+            var userSource = File.ReadAllText(updatedSourcePath);
+            userSource = OptionGenerator.ApplyValueReplacements(userSource, mod.Options);
 
-            var modRoot = modTree.GetRoot();
-            var classes = modRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
-            var enums = modRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
-            var interfaces = modRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
+            var parseOptions = new CSharpParseOptions(LanguageVersion.Latest, preprocessorSymbols: 
+                OptionGenerator.GetPreprocessorSymbols(mod.Options));
+            var userTree = CSharpSyntaxTree.ParseText(userSource, parseOptions);
+            var userRoot = userTree.GetRoot();
+                
+            var classes = userRoot.DescendantNodes().OfType<ClassDeclarationSyntax>().ToList();
+            var enums = userRoot.DescendantNodes().OfType<EnumDeclarationSyntax>().ToList();
+            var interfaces = userRoot.DescendantNodes().OfType<InterfaceDeclarationSyntax>().ToList();
             
-            var @namespace = modRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+            var @namespace = userRoot.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
             var namespaceName = @namespace?.Name.ToString() ?? string.Empty;
             
             var hasClass = classes.Count != 0;
@@ -49,11 +53,11 @@ public static class AssemblyPatcher {
                 return false;
             }
             
-            var methods = modRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
-            var properties = modRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
-            var fields = modRoot.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
-            var events = modRoot.DescendantNodes().OfType<EventDeclarationSyntax>().ToList();
-            var eventFields = modRoot.DescendantNodes().OfType<EventFieldDeclarationSyntax>().ToList();
+            var methods = userRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
+            var properties = userRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
+            var fields = userRoot.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
+            var events = userRoot.DescendantNodes().OfType<EventDeclarationSyntax>().ToList();
+            var eventFields = userRoot.DescendantNodes().OfType<EventFieldDeclarationSyntax>().ToList();
 
             var members = methods.Concat<MemberDeclarationSyntax>(properties).Concat(fields).Concat(events).Concat(eventFields).ToList();
 
@@ -64,9 +68,53 @@ public static class AssemblyPatcher {
 
             var readerParams = new ReaderParameters { AssemblyResolver = resolver, ReadWrite = true };
             
-            File.Copy(dllPath, backupPath, true);
 
-            using var originalAssembly = AssemblyDefinition.ReadAssembly(backupPath, readerParams);
+            using var originalAssembly = AssemblyDefinition.ReadAssembly(workingCopy, readerParams);
+
+            if (hasEnum) {
+                var enumDecl = enums.First();
+                if (MemberRemover.IsMarkedForRemoval(enumDecl)) {
+                    var fullTypeName = string.IsNullOrEmpty(namespaceName)
+                        ? enumDecl.Identifier.Text
+                        : $"{namespaceName}.{enumDecl.Identifier.Text}";
+        
+                    MemberRemover.RemoveType(originalAssembly, fullTypeName);
+                    originalAssembly.Write(dllPath);
+                    Logger.Log(LogLevel.Info, $"Successfully patched assembly at {dllPath}");
+                    return true;
+                }
+            }
+
+            if (hasInterface) {
+                var interfaceDecl = interfaces.First();
+                if (MemberRemover.IsMarkedForRemoval(interfaceDecl)) {
+                    var fullTypeName = string.IsNullOrEmpty(namespaceName) 
+                        ? interfaceDecl.Identifier.Text
+                        : $"{namespaceName}.{interfaceDecl.Identifier.Text}";
+        
+                    MemberRemover.RemoveType(originalAssembly, fullTypeName);
+                    originalAssembly.Write(dllPath);
+                    Logger.Log(LogLevel.Info, $"Successfully patched assembly at {dllPath}");
+                    return true;
+                }
+            }
+
+            if (hasClass) {
+                var classDecl = classes.First();
+                if (MemberRemover.IsMarkedForRemoval(classDecl)) {
+                    var baseName = classDecl.Identifier.Text;
+                    var arity = classDecl.TypeParameterList?.Parameters.Count ?? 0;
+                    var fullType = arity > 0 ? $"{baseName}`{arity}" : baseName;
+                    var fullTypeName = string.IsNullOrEmpty(namespaceName) 
+                        ? fullType 
+                        : $"{namespaceName}.{fullType}";
+        
+                    MemberRemover.RemoveType(originalAssembly, fullTypeName);
+                    originalAssembly.Write(dllPath);
+                    Logger.Log(LogLevel.Info, $"Successfully patched assembly at {dllPath}");
+                    return true;
+                }
+            }
 
             if (hasEnum) {
                 var enumDecl = enums.First();
@@ -130,7 +178,7 @@ public static class AssemblyPatcher {
                         
                         Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
                         if (!TryUpdateClassTypeMembers(originalAssembly, fullTypeName, @namespace, classDecl, methods,
-                                properties, fields, events, eventFields, modRoot, references, readerParams, decompiledSource))
+                                properties, fields, events, eventFields, userRoot, references, readerParams, decompiledSource, parseOptions))
                             return false;
                     } else {
                         Logger.Log(LogLevel.Info, $"Class {fullTypeName} found but no members to add/replace.");
@@ -145,8 +193,7 @@ public static class AssemblyPatcher {
             ErrorHandler.Handle("Error patching assembly", ex);
             return false;
         } finally {
-            File.Delete(fileCopy);
-            File.Delete(backupPath);
+            File.Delete(workingCopy);
         }
     }
 
@@ -233,8 +280,20 @@ public static class AssemblyPatcher {
         SyntaxNode updatedRoot,
         List<MetadataReference> references,
         ReaderParameters readerParams,
-        string decompiledSource) {
+        string decompiledSource, CSharpParseOptions parseOptions) {
 
+        var methodsToRemove = methods.Where(MemberRemover.IsMarkedForRemoval).ToList();
+        var propertiesToRemove = properties.Where(MemberRemover.IsMarkedForRemoval).ToList();
+        var fieldsToRemove = fields.Where(MemberRemover.IsMarkedForRemoval).ToList();
+        var eventsToRemove = events.Where(MemberRemover.IsMarkedForRemoval).ToList();
+        var eventFieldsToRemove = eventFields.Where(MemberRemover.IsMarkedForRemoval).ToList();
+        
+        methods = methods.Except(methodsToRemove).ToList();
+        properties = properties.Except(propertiesToRemove).ToList();
+        fields = fields.Except(fieldsToRemove).ToList();
+        events = events.Except(eventsToRemove).ToList();
+        eventFields = eventFields.Except(eventFieldsToRemove).ToList();
+        
         var decompTree = CSharpSyntaxTree.ParseText(decompiledSource);
 
         if (decompTree.GetRoot() is not CompilationUnitSyntax decompRoot) {
@@ -317,7 +376,7 @@ public static class AssemblyPatcher {
         }
 
         var mergedSource = mergedRoot.NormalizeWhitespace().ToFullString();
-        var mergedTree = CSharpSyntaxTree.ParseText(mergedSource);
+        var mergedTree = CSharpSyntaxTree.ParseText(mergedSource, parseOptions);
 
         var tempAsmName = Path.GetRandomFileName();
         var compilation = CSharpCompilation.Create(
@@ -352,6 +411,9 @@ public static class AssemblyPatcher {
             ErrorHandler.Handle($"Original type {fullTypeName} not found.", null);
             return false;
         }
+        
+        MemberRemover.RemoveMarkedMembers(originalType, fullTypeName, methodsToRemove, 
+            propertiesToRemove, fieldsToRemove, eventsToRemove, eventFieldsToRemove);
         
         foreach (var clone in newType.NestedTypes.Select(n => TypeCloner.CloneType(n, originalAssembly.MainModule))) {
             originalType.NestedTypes.Add(clone);

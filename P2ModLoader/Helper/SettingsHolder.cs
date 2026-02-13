@@ -1,6 +1,5 @@
 using P2ModLoader.Data;
 using P2ModLoader.Logging;
-using P2ModLoader.Patching.Backups;
 
 namespace P2ModLoader.Helper;
 
@@ -111,11 +110,9 @@ public static class SettingsHolder {
 	public static void UpdateModState(IEnumerable<Mod> mods) {
 		if (SelectedInstall == null) return;
     
-		SelectedInstall.ModState = mods.Select(mod => new SavedModState(
-			mod.FolderName,
-			mod.IsEnabled,
-			mod.LoadOrder
-		)).ToList();
+		SelectedInstall.ModState = mods.Select(mod => new SavedModState(mod.FolderName, mod.IsEnabled, mod.LoadOrder) {
+			OptionValues = new Dictionary<string, object?>(mod.OptionValues)
+		}).ToList();
 		ModStateChanged?.Invoke();
 	}
 
