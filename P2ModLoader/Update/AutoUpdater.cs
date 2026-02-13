@@ -10,12 +10,24 @@ public static class AutoUpdater {
     private const string OWNER = "SurDno";
     private const string REPO = "P2ModLoader";
     
-    private static readonly string BaseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-    private static readonly string UpdateDirectory = Path.Combine(BaseDirectory, "Updates");
+    private static string? BaseDirectory => InstallationValidator.GetSafeBaseDirectory();
+    private static string? UpdateDirectory => BaseDirectory != null ? Path.Combine(BaseDirectory, "Updates") : null;
 
     
     public static async Task CheckForUpdatesAsync(bool showNoUpdatesDialog = false) { 	
         Logger.Log(LogLevel.Info, $"Initiating update check...");
+        
+        if (!InstallationValidator.IsInValidInstallationFolder(out var validationError)) {
+            Logger.Log(LogLevel.Error, $"Update check blocked: invalid installation folder...");
+            MessageBox.Show(validationError, "Auto-Update Disabled", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        
+        if (BaseDirectory == null || UpdateDirectory == null) {
+            ErrorHandler.Handle("Could not determine application directory for updates", null);
+            return;
+        }
+        
         try {
             var releases = await GitHubDownloader.GetAllReleasesAsync(OWNER, REPO);
             if (releases == null || releases.Count == 0 || releases[0].Assets.Count == 0) {
@@ -49,6 +61,11 @@ public static class AutoUpdater {
     }
 
     private static async Task DownloadAndInstallUpdateAsync(GitHubRelease release) { 	
+        if (UpdateDirectory == null || BaseDirectory == null) {
+            ErrorHandler.Handle("Could not determine directories for update", null);
+            return;
+        }
+        
         Directory.CreateDirectory(UpdateDirectory);
 
         var assetUrl = release.Assets[0].BrowserDownloadUrl;
