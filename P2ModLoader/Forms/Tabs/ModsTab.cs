@@ -279,10 +279,7 @@ public class ModsTab : BaseTab {
         if (string.IsNullOrEmpty(installPath)) return;
 
         var modsPath = Path.Combine(installPath, "Mods");
-        var logsPath = Path.Combine(installPath, "Logs");
-
         Directory.CreateDirectory(modsPath);
-        Directory.CreateDirectory(logsPath);
 
         UpdateUiState();
     }

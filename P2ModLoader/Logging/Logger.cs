@@ -7,7 +7,6 @@ public static class Logger {
     private static readonly string ExeLogFilePath;
     private static readonly object LockObject = new();
     private static readonly List<string> BufferedLogs = [];
-    private static string? _lastInstallLogPath;
     
     public static event Action<string>? LogMessageAdded;
     private static readonly List<string> _logMessages = [];
@@ -19,22 +18,7 @@ public static class Logger {
         File.Delete(ExeLogFilePath);
     }
 
-    public static string GetLogPath() => GetInstallLogPath() ?? ExeLogFilePath;
-
-    private static string? GetInstallLogPath() {
-        if (string.IsNullOrEmpty(SettingsHolder.InstallPath))
-            return null;
-
-        var installLogDirectory = Path.Combine(SettingsHolder.InstallPath, "Logs");
-        return !Directory.Exists(installLogDirectory) ? null : Path.Combine(installLogDirectory, "P2ModLoader.log");
-    }
-
-    private static void HandleInstallPathChange(string newInstallLogPath) {
-        if (newInstallLogPath != _lastInstallLogPath) {
-            File.WriteAllLines(newInstallLogPath, BufferedLogs);
-            _lastInstallLogPath = newInstallLogPath;
-        }
-    }
+    public static string GetLogPath() => ExeLogFilePath;
 
     private static void WriteToLogs(string content, bool timestamped = true) {
         var logMessage = timestamped ? $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {content}" : content;
@@ -44,14 +28,8 @@ public static class Logger {
             lock (LockObject) {
                 File.AppendAllText(ExeLogFilePath, logMessage + Environment.NewLine);
                 BufferedLogs.Add(logMessage);
-
                 _logMessages.Add(logMessage);
                 LogMessageAdded?.Invoke(logMessage);
-
-                var installLogPath = GetInstallLogPath();
-                if (installLogPath == null) return;
-                HandleInstallPathChange(installLogPath);
-                File.AppendAllText(installLogPath, logMessage + Environment.NewLine);
             }
         } catch (Exception ex) {
             ErrorHandler.Handle($"Error writing to log file: {ex.Message}", ex, skipLogging: true);
