@@ -42,6 +42,7 @@ public class Mod {
 		}
 	}
 	
+	public bool HasUrl => !string.IsNullOrEmpty(Info.Url);
 	public bool HasOptions => Options?.Categories.Any(c => c.Options.Count > 0) ?? false;
 	
 	public bool IsCompatibleWith(Install install) => Info.Games.Contains(install.Game);

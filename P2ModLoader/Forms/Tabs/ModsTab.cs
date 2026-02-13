@@ -239,8 +239,14 @@ public class ModsTab : BaseTab {
             Text = "Configure Mod",
             Width = 180,
             Height = 35,
-            Enabled = false
+            Enabled = false,
+            TextImageRelation = TextImageRelation.ImageBeforeText,
+            ImageAlign = ContentAlignment.MiddleLeft,
+            Image = new Bitmap(ResourcesLoader.LoadImage("options", "png")!, new Size(16, 16)),
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(8, 0, 5 , 0)
         };
+
         _optionsButton.Click += OptionsButton_Click;
         
         _descriptionBox = new NoCaretTextBox {
@@ -380,37 +386,36 @@ public class ModsTab : BaseTab {
         var focusedItem = _modListView!.FocusedItem;
         if (focusedItem == null) return;
 
-        var mod = focusedItem.Tag as Mod;
+        var mod = (focusedItem.Tag as Mod)!;
         var contextMenu = new ContextMenuStrip();
 
-        if (!string.IsNullOrEmpty(mod!.Info.Url)) {
-            var openUrlItem = new ToolStripMenuItem("Open URL");
-            openUrlItem.Click += (_, _) => {
-                Process.Start(new ProcessStartInfo {
-                    FileName = mod.Info.Url,
-                    UseShellExecute = true
-                });
-            };
-            contextMenu.Items.Add(openUrlItem);
-        }
-
-        if (mod!.HasOptions) {
-            var optionsItem = new ToolStripMenuItem("Options");
-            optionsItem.Click += (_, _) => {
-                using var optionsForm = new ModOptionsForm(mod);
-                if (optionsForm.ShowDialog() == DialogResult.OK) {
-                    ModsChanged?.Invoke();
-                }
-            };
-            contextMenu.Items.Add(optionsItem);
-        }
+        var openUrlItem = CreateToolStripMenuItem("Open URL", Keys.Control | Keys.U, enabled: mod.HasUrl);
+        openUrlItem.Click += (_, _) => {
+            Process.Start(new ProcessStartInfo {
+                FileName = mod.Info.Url,
+                UseShellExecute = true
+            });
+        };
+        contextMenu.Items.Add(openUrlItem);
         
-        var openFolderItem = new ToolStripMenuItem("Open folder");
+
+        var optionsItem = CreateToolStripMenuItem("Configure Mod", Keys.Control | Keys.C, enabled: mod.HasOptions);
+        optionsItem.Click += (_, _) => {
+            using var optionsForm = new ModOptionsForm(mod);
+            if (optionsForm.ShowDialog() == DialogResult.OK) 
+                ModsChanged?.Invoke();
+        };
+        contextMenu.Items.Add(optionsItem);
+
+        var openFolderItem = CreateToolStripMenuItem("Open Folder", Keys.Control | Keys.O);
         openFolderItem.Click += (_, _) => { Process.Start("explorer.exe", mod.FolderPath); };
         contextMenu.Items.Add(openFolderItem);
 
         contextMenu.Show(_modListView, e.Location);
     }
+
+    public ToolStripMenuItem CreateToolStripMenuItem(string text, Keys shortcutKeys, bool enabled = true) =>
+        new(text) { Enabled = enabled, ShortcutKeys = shortcutKeys };
 
     private void ModListView_ItemDrag(object? sender, ItemDragEventArgs e) {
         _modListView!.DoDragDrop(e.Item!, DragDropEffects.Move);

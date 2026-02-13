@@ -47,6 +47,8 @@
       <EmbeddedResource Include="Resources\p2d.jpg" />
       <None Remove="Resources\steam.png" />
       <EmbeddedResource Include="Resources\steam.png" />
+      <None Remove="Resources\options.png" />
+      <EmbeddedResource Include="Resources\options.png" />
     </ItemGroup>
 
 </Project>
