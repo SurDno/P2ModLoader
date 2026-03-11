@@ -21,7 +21,7 @@ public static class MethodCloner {
         if (!src.HasBody)
             return newMethod;
         newMethod.Body = new MethodBody(newMethod);
-        CopyMethodBody(src.Body, newMethod.Body, targetModule, newMethod, src.DeclaringType);
+        CopyMethodBody(src.Body, newMethod.Body, targetModule, newMethod, src.DeclaringType, new());
         return newMethod;
     }
 
@@ -50,7 +50,14 @@ public static class MethodCloner {
         
         originalMethod.Attributes = newMethod.Attributes;
         originalMethod.Body = new(originalMethod);
-        CopyMethodBody(newMethod.Body, originalMethod.Body, targetModule, newMethod, originalMethod.DeclaringType);
+        
+        var genericParamMap = new Map<GenericParameter>();
+        for (var i = 0; i < newMethod.GenericParameters.Count; i++) {
+            if (i < originalMethod.GenericParameters.Count)
+                genericParamMap[newMethod.GenericParameters[i]] = originalMethod.GenericParameters[i];
+        }
+
+        CopyMethodBody(newMethod.Body, originalMethod.Body, targetModule, newMethod, originalMethod.DeclaringType, genericParamMap);
         originalMethod.CustomAttributes.Clear();
         AttributesCloner.CloneAttributes(newMethod, originalMethod, targetModule);
     }
@@ -111,8 +118,8 @@ public static class MethodCloner {
     private static bool IsCompilerGeneratedName(string name) => name.Contains('<');
 
     private static void CopyMethodBody(MethodBody sourceBody, MethodBody targetBody, 
-        ModuleDefinition module, MethodDefinition contextMethod, TypeDefinition currentType) {
-
+        ModuleDefinition module, MethodDefinition contextMethod, TypeDefinition currentType,
+        Map<GenericParameter> genericParamMap) {
         var variableMap = new Map<VariableDefinition>();
         foreach (var v in sourceBody.Variables) {
             var nv = new VariableDefinition(module.ImportReference(v.VariableType));
@@ -129,7 +136,8 @@ public static class MethodCloner {
         var ilProcessor = targetBody.GetILProcessor();
         var instructionMap = new Map<Instruction>();
         foreach (var instr in sourceBody.Instructions) {
-            var cloned = InstructionCloner.CloneInstruction(instr, module, variableMap, parameterMap, instructionMap, contextMethod, currentType);
+            var cloned = InstructionCloner.CloneInstruction(instr, module, variableMap, parameterMap,
+                instructionMap, contextMethod, currentType, genericParamMap);
             instructionMap[instr] = cloned;
             ilProcessor.Append(cloned);
         }

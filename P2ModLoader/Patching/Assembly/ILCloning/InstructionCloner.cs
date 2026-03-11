@@ -8,11 +8,11 @@ public static class InstructionCloner {
 
     public static Instruction CloneInstruction(Instruction src, ModuleDefinition module,
         Map<VariableDefinition> variableMap, Map<ParameterDefinition> parameterMap, Map<Instruction> instructionMap,
-        IGenericParameterProvider contextProvider, TypeDefinition type) { 	
-        var clone = CloneInstructionImpl(src, module, variableMap, parameterMap, instructionMap, contextProvider, type);
+        IGenericParameterProvider contextProvider, TypeDefinition type, Map<GenericParameter> genericParamMap) { 	
+        var clone = CloneInstructionImpl(src, module, variableMap, parameterMap, instructionMap, contextProvider, type, genericParamMap);
         
-        var srcText = $"{src.OpCode} “{src.Operand}” ({src.Operand?.GetType().Name})";
-        var cloneText = $"{clone.OpCode} “{clone.Operand}” ({clone.Operand?.GetType().Name})";
+        var srcText = $"{src.OpCode} \"{src.Operand}\" ({src.Operand?.GetType().Name})";
+        var cloneText = $"{clone.OpCode} \"{clone.Operand}\" ({clone.Operand?.GetType().Name})";
         if (srcText == cloneText) return clone;
         Logger.Log(LogLevel.Error, $"Instruction mismatch after cloning! Some data may be lost!");
         Logger.Log(LogLevel.Error, $"[BEFORE CLONE] IL_{src.Offset:X4}: {srcText}");
@@ -23,7 +23,7 @@ public static class InstructionCloner {
     
     private static Instruction CloneInstructionImpl(Instruction src, ModuleDefinition module,
         Map<VariableDefinition> variableMap, Map<ParameterDefinition> parameterMap, Map<Instruction> instructionMap,
-        IGenericParameterProvider contextProvider, TypeDefinition type) { 	
+        IGenericParameterProvider contextProvider, TypeDefinition type, Map<GenericParameter> genericParamMap) { 	
         var opcode = src.OpCode;
         var operand = src.Operand;
 
@@ -34,10 +34,12 @@ public static class InstructionCloner {
                 var defRef = module.ImportReference(gim.ElementMethod);
                 var inst = new GenericInstanceMethod(defRef);
                 foreach (var arg in gim.GenericArguments) {
-                    if (arg is GenericParameter gp)
-                        inst.GenericArguments.Add(defRef.GenericParameters[gp.Position]);
-                    else
+                    if (arg is GenericParameter gp) {
+                        inst.GenericArguments.Add(genericParamMap.TryGetValue(gp, out var remapped) ? remapped : 
+                            contextProvider.GenericParameters[gp.Position]);
+                    } else {
                         inst.GenericArguments.Add(module.ImportReference(arg));
+                    }
                 }
                 return Instruction.Create(opcode, inst);
             case GenericInstanceType git:
@@ -51,8 +53,10 @@ public static class InstructionCloner {
                 }
                 return Instruction.Create(opcode, instance);
             case GenericParameter gp:
-                var mapped = contextProvider.GenericParameters[gp.Position];
-                return Instruction.Create(opcode, mapped);
+                if (genericParamMap.TryGetValue(gp, out var mapped))
+                    return Instruction.Create(opcode, mapped);
+                Logger.Log(LogLevel.Warning, $"WARNING! Mapping generic parameter by position!");
+                return Instruction.Create(opcode, contextProvider.GenericParameters[gp.Position]);
             case TypeReference typeRef:
                 return Instruction.Create(opcode, module.ImportReference(typeRef));
             case MethodReference methodRef:
