@@ -23,7 +23,7 @@ public static class DependencyManager {
             if (VersionComparison.IsLoaderNewer(mod.Info.MinLoaderVersion)) {
                 return new DependencyValidation {
                     HasErrors = true,
-                    ErrorMessage = $"\r\nThis mod requires P2ModLoader version {mod.Info.MinLoaderVersion} or newer." +
+                    ErrorMessage = $"\r\nThis mod requires P2ModLoader version {mod.Info.MinLoaderVersion} or newer. " +
                                    $"Head to Settings to update.",
                     DisplayColor = Color.Red
                 };
