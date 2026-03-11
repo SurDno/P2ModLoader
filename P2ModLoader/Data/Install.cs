@@ -46,9 +46,12 @@ public class Install {
     public string FullManagedPath => Path.Combine(InstallPath, ManagedPath);
     public string FullAssetsPath => Path.Combine(InstallPath, AssetsPath);
     
+    // TERRIBLE workaround for GOG installs, rewrite later
     public string ExecutablePath => Game == Game.Pathologic2 
         ? Path.Combine(InstallPath, "Pathologic.exe")
-        : Path.Combine(InstallPath, "Pathologic3.exe");
+        : File.Exists(Path.Combine(InstallPath, "Pathologic3.exe"))
+            ? Path.Combine(InstallPath, "Pathologic3.exe")
+            : Path.Combine(InstallPath, "Pathologic 3.exe");
 
     public string? GameAppDataName => Game switch {
         Game.Pathologic2 => "Pathologic 2",
