@@ -195,7 +195,10 @@ public static class InstallationLocator {
         if (File.Exists(Path.Combine(installPath, "Pathologic3.exe")) || 
             File.Exists(Path.Combine(installPath, "Pathologic 3.exe"))) {
             var appInfoPath = Path.Combine(installPath, "Pathologic3_Data", "app.info");
-            if (!File.Exists(appInfoPath)) return null;
+            if (!File.Exists(appInfoPath))
+                appInfoPath = Path.Combine(installPath, "Pathologic 3_Data", "app.info");
+            if (!File.Exists(appInfoPath))
+                return null;
             var content = File.ReadAllText(appInfoPath);
             if (content.Contains("Quarantine", StringComparison.OrdinalIgnoreCase))
                 return Game.Pathologic3Quarantine;
