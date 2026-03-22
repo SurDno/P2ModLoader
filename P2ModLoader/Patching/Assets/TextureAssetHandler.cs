@@ -41,6 +41,8 @@ namespace P2ModLoader.Patching.Assets {
                 textureFile.m_TextureSettings.m_Aniso = 1;
                 textureFile.m_ImageCount = 1;
                 textureFile.m_IsReadable = true;
+                textureFile.m_ColorSpace = 1;
+                textureFile.m_LightmapFormat = 6;
                 
                 bitmap.Dispose();
                 
