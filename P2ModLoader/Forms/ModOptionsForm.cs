@@ -488,7 +488,7 @@ public sealed class ModOptionsForm : Form {
 
     private bool IsDependencyMet(string dependency) {
         if (!_optionsByMacro.TryGetValue(dependency, out var depOption)) return true;
-        if (!_optionControls.TryGetValue(dependency, out var depControl)) return true;
+        if (!_optionControls.TryGetValue(depOption.Name, out var depControl)) return true;
 
         return depOption.Type switch {
             ModOptions.OptionType.Boolean => (depControl as CheckBox)?.Checked ?? false,
