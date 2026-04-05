@@ -65,6 +65,9 @@ public class Mod {
 		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic3_Data"));
 		AddToListIfDefinitionExists(modTypes, "txt", "assets (text)", Path.Combine(FolderPath, "Pathologic3_Data"));
 		AddToListIfDefinitionExists(modTypes, "png", "assets (textures)", Path.Combine(FolderPath, "Pathologic3_Data"));
+		AddToListIfDefinitionExists(modTypes, "bytes", "assets (text)", Path.Combine(FolderPath, "Pathologic 3_Data"));
+		AddToListIfDefinitionExists(modTypes, "txt", "assets (text)", Path.Combine(FolderPath, "Pathologic 3_Data"));
+		AddToListIfDefinitionExists(modTypes, "png", "assets (textures)", Path.Combine(FolderPath, "Pathologic 3_Data"));
     
 		return modTypes.Count > 0 ? $"Modifies: {string.Join(", ", modTypes)}" : "No modifications detected";
 	}

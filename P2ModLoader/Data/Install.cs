@@ -41,7 +41,8 @@ public class Install {
     public string LogsPath => Path.Combine(InstallPath, "Logs");
     public string BackupsPath => Path.Combine(InstallPath, "Backups");
     
-    public string AssetsPath => Game == Game.Pathologic2 ? "Pathologic_Data" : "Pathologic3_Data";
+    public string AssetsPath => Game == Game.Pathologic2 ? "Pathologic_Data" :
+        Directory.Exists(Path.Combine(InstallPath, "Pathologic3_Data")) ? "Pathologic3_Data" : "Pathologic 3_Data";
     public string ManagedPath => Path.Combine(AssetsPath, "Managed");
     public string FullManagedPath => Path.Combine(InstallPath, ManagedPath);
     public string FullAssetsPath => Path.Combine(InstallPath, AssetsPath);

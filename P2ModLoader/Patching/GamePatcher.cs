@@ -42,8 +42,15 @@ public static class GamePatcher {
             Logger.Log(LogLevel.Info, $"Processing mod {mod.Info.Name}");
             _progressForm?.UpdateProgress(index, enabledMods.Count, $"Loading mod: {mod.Info.Name}");
 
+            var isp3 = SettingsHolder.SelectedInstall!.Game is Game.Pathologic3 or Game.Pathologic3Demo or Game.Pathologic3Quarantine;
+            
             var managedPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.ManagedPath);
+            if (isp3 && !Directory.Exists(managedPath))
+                managedPath = Path.Combine(mod.FolderPath, "Pathologic3_Data", "Managed");
+
             var assetsPath = Path.Combine(mod.FolderPath, SettingsHolder.SelectedInstall!.AssetsPath);
+            if (isp3 && !Directory.Exists(assetsPath))
+                assetsPath = Path.Combine(mod.FolderPath, "Pathologic3_Data");
             var dataPath = Path.Combine(mod.FolderPath, DATA_PATH);
 
             if (Directory.Exists(managedPath) && !TryProcessAssemblies(managedPath, mod)) return false;
@@ -108,8 +115,7 @@ public static class GamePatcher {
         var assetsByFile = new Dictionary<string, List<string>>();
 
         foreach (var directory in Directory.GetDirectories(modAssetsPath)) {
-            if (directory.EndsWith(SettingsHolder.SelectedInstall!.ManagedPath.TrimEnd('/'),
-                    StringComparison.OrdinalIgnoreCase)) continue;
+            if (directory.EndsWith("Managed", StringComparison.OrdinalIgnoreCase)) continue;
 
             var assetsFileName = Path.GetFileName(directory);
             var targetPath = Path.Combine(SettingsHolder.InstallPath!, 
