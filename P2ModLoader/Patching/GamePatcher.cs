@@ -79,6 +79,10 @@ public static class GamePatcher {
                 _progressForm?.UpdateProgress($"Copying for {mod.Info.Name}: {Path.GetFileName(target)}");
             } else if (Directory.Exists(source)) {
                 var assemblyPath = target + ".dll";
+                if (!File.Exists(assemblyPath)) {
+                    Logger.Log(LogLevel.Warning, $"Skipping DLL {assemblyPath} because it does not exist for this install.");
+                    continue;
+                }
                 var backup = BackupManager.CreateBackupOrTrack(assemblyPath);
                 try {
                     if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod)) {
