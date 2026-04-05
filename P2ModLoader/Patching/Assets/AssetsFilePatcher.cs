@@ -14,6 +14,7 @@ public static class AssetsFilePatcher {
     
     private static HashSet<(long pathId, string normalizedPath)>? _resourcePathLookup;
     private static Dictionary<AssetClassID, List<AssetFileInfo>>? _assetsByType;
+    private static Dictionary<(AssetClassID, string name), AssetFileInfo>? _assetsByName;
 
     private static readonly AssetsManager SharedManager;
     
@@ -61,6 +62,7 @@ public static class AssetsFilePatcher {
         } finally {
             _resourcePathLookup = null;
             _assetsByType = null;
+            _assetsByName = null;
             if (File.Exists(outputFile))
                 File.Delete(outputFile);
         }
@@ -72,10 +74,17 @@ public static class AssetsFilePatcher {
             .ToHashSet();
 
         _assetsByType = new Dictionary<AssetClassID, List<AssetFileInfo>>();
+        _assetsByName = new Dictionary<(AssetClassID, string), AssetFileInfo>();
+    
         foreach (var handler in AssetHandlers) {
-            _assetsByType[handler.ClassId] = assetsFileInstance.file
-                .GetAssetsOfType(handler.ClassId)
-                .ToList();
+            var assets = assetsFileInstance.file.GetAssetsOfType(handler.ClassId).ToList();
+            _assetsByType[handler.ClassId] = assets;
+
+            foreach (var assetInfo in assets) {
+                var nameField = SharedManager.GetBaseField(assetsFileInstance, assetInfo)["m_Name"]?.AsString;
+                if (!string.IsNullOrEmpty(nameField))
+                    _assetsByName.TryAdd((handler.ClassId, nameField.ToLowerInvariant()), assetInfo);
+            }
         }
     }
 
@@ -181,19 +190,22 @@ public static class AssetsFilePatcher {
         byte[] assetData, string resourcePath, AssetTypeHandlerBase handler) {
         try {
             var normalizedResourcePath = resourcePath.Replace('\\', '/');
-            Logger.Log(LogLevel.Info, $"Looking for {handler.ClassId} with path '{normalizedResourcePath}'");
 
-            if (_assetsByType != null && 
-                _assetsByType.TryGetValue(handler.ClassId, out var assetList) &&
-                _resourcePathLookup != null) {
-                
+            if (_resourcePathLookup is { Count: > 0 } && _assetsByType != null) {
                 var normalizedLower = normalizedResourcePath.ToLowerInvariant();
-                
-                foreach (var assetInfo in assetList) {
-                    if (_resourcePathLookup.Contains((assetInfo.PathId, normalizedLower))) {
-                        Logger.Log(LogLevel.Info, $"Found exact path match for PathID {assetInfo.PathId}");
-                        return handler.Replace(SharedManager, assetsFileInstance, assetInfo, assetData);
+                if (_assetsByType.TryGetValue(handler.ClassId, out var assetList)) {
+                    foreach (var assetInfo in assetList) {
+                        if (_resourcePathLookup.Contains((assetInfo.PathId, normalizedLower))) {
+                            Logger.Log(LogLevel.Info, $"Found resource path match for PathID {assetInfo.PathId}");
+                            return handler.Replace(SharedManager, assetsFileInstance, assetInfo, assetData);
+                        }
                     }
+                }
+            } else if (_assetsByName != null) {
+                var nameLower = assetName.ToLowerInvariant();
+                if (_assetsByName.TryGetValue((handler.ClassId, nameLower), out var assetInfo)) {
+                    Logger.Log(LogLevel.Info, $"Found name match for '{assetName}'");
+                    return handler.Replace(SharedManager, assetsFileInstance, assetInfo, assetData);
                 }
             }
 
