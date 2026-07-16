@@ -32,15 +32,11 @@ public static class MemberRemover {
         List<MethodDeclarationSyntax> methodsToRemove) {
         foreach (var methodSyntax in methodsToRemove) {
             var methodName = methodSyntax.Identifier.Text;
+            bool isExplicitImpl = methodSyntax.ExplicitInterfaceSpecifier != null;
             var paramTypes = methodSyntax.ParameterList.Parameters
                 .Select(p => p.Type.ToString()).ToList();
 
-            var methodToRemove = originalType.Methods.FirstOrDefault(m =>
-                m.Name == methodName &&
-                m.Parameters.Count == paramTypes.Count &&
-                m.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(
-                    paramTypes.Select(pt => pt.Split('.').Last())
-                ));
+            var methodToRemove = MethodMatcher.FindMatchingMethod(originalType, methodName, paramTypes, isExplicitImpl);
 
             if (methodToRemove != null) {
                 originalType.Methods.Remove(methodToRemove);

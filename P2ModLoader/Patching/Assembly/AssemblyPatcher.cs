@@ -422,36 +422,21 @@ public static class AssemblyPatcher {
 
 
         foreach (var methodSyntax in methods) {
-            string methodName;
             bool isExplicitImpl = methodSyntax.ExplicitInterfaceSpecifier != null;
+            var methodName = methodSyntax.Identifier.Text;
+            var paramTypes = methodSyntax.ParameterList.Parameters
+                .Select(p => p.Type.ToString())
+                .ToList();
 
             if (isExplicitImpl) {
                 var interfaceName = methodSyntax.ExplicitInterfaceSpecifier.Name.ToString();
-                var simpleName = methodSyntax.Identifier.Text;
-
-                var paramTypes = methodSyntax.ParameterList.Parameters
-                    .Select(p => p.Type.ToString())
-                    .ToList();
-
-                var newMethod = newType.Methods.FirstOrDefault(m =>
-                    m.Name.EndsWith($".{simpleName}") &&
-                    m.Parameters.Count == paramTypes.Count &&
-                    m.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(
-                        paramTypes.Select(pt => pt.Split('.').Last())
-                    )
-                );
-
-                var originalMethod = originalType.Methods.FirstOrDefault(m =>
-                    m.Name.EndsWith($".{simpleName}") &&
-                    m.Parameters.Count == paramTypes.Count &&
-                    m.Parameters.Select(p => p.ParameterType.Name).SequenceEqual(
-                        paramTypes.Select(pt => pt.Split('.').Last())
-                    )
-                );
+                
+                var newMethod = MethodMatcher.FindMatchingMethod(newType, methodName, paramTypes, true);
+                var originalMethod = MethodMatcher.FindMatchingMethod(originalType, methodName, paramTypes, true);
 
                 if (newMethod == null) {
                     Logger.Log(LogLevel.Warning,
-                        $"Could not find explicit method {interfaceName}.{simpleName} in the compiled assembly");
+                        $"Could not find explicit method {interfaceName}.{methodName} in the compiled assembly");
                     continue;
                 }
 
@@ -463,9 +448,8 @@ public static class AssemblyPatcher {
                     Logger.Log(LogLevel.Info, $"Replaced method {originalMethod.Name} in type {fullTypeName}");
                 }
             } else {
-                methodName = methodSyntax.Identifier.Text;
-                var newMethod = newType.Methods.FirstOrDefault(m => m.Name == methodName);
-                var originalMethod = originalType.Methods.FirstOrDefault(m => m.Name == methodName);
+                var newMethod = MethodMatcher.FindMatchingMethod(newType, methodName, paramTypes, false);
+                var originalMethod = MethodMatcher.FindMatchingMethod(originalType, methodName, paramTypes, false);
 
                 if (newMethod == null) {
                     Logger.Log(LogLevel.Warning, $"Could not find method {methodName} in the compiled assembly");
