@@ -8,6 +8,7 @@ public static class GitHubDownloader {
 	private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 	
 	static GitHubDownloader() { 	
+		System.Net.ServicePointManager.SecurityProtocol |= System.Net.SecurityProtocolType.Tls12;
 		Client = new HttpClient();
 		Client.DefaultRequestHeaders.Add("User-Agent", "Auto-Updater");
 	}
