@@ -196,8 +196,16 @@ public static class BackupManager {
 		}
 	}
 
-	public static void DeleteBackupIfExists(string? backupPath) {
+	public static void RestoreBackupIfExists(string? backupPath, string originalPath) {
 		if (backupPath == null || !File.Exists(backupPath)) return;
+
+		try {
+			File.Copy(backupPath, originalPath, true);
+			Logger.Log(LogLevel.Info, $"Restored backup after failure: {Path.GetFileName(backupPath)}");
+		} catch (Exception ex) {
+			Logger.Log(LogLevel.Error, $"Failed to restore backup after failure: {ex.Message}");
+		}
+
 		File.Delete(backupPath);
 		
 		var directory = Path.GetDirectoryName(backupPath)!;
@@ -205,7 +213,7 @@ public static class BackupManager {
 			Directory.Delete(directory, false);
 			directory = Path.GetDirectoryName(directory);
 		}
-		Logger.Log(LogLevel.Debug, $"Deleted incomplete backup: {Path.GetFileName(backupPath)}");
+		Logger.Log(LogLevel.Debug, $"Deleted backup after restoration: {Path.GetFileName(backupPath)}");
 	}
 	
 	private static void CleanupBackupFolder() {

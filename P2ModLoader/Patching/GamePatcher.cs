@@ -73,7 +73,7 @@ public static class GamePatcher {
                     File.Copy(source, target, true);
                     BackupManager.SavePatchedFileHash(target);
                 } catch {
-                    BackupManager.DeleteBackupIfExists(backup);
+                    BackupManager.RestoreBackupIfExists(backup, target);
                     throw;
                 }
                 _progressForm?.UpdateProgress($"Copying for {mod.Info.Name}: {Path.GetFileName(target)}");
@@ -86,12 +86,12 @@ public static class GamePatcher {
                 var backup = BackupManager.CreateBackupOrTrack(assemblyPath);
                 try {
                     if (!PatchAssemblyWithCodeFiles(source, assemblyPath, mod)) {
-                        BackupManager.DeleteBackupIfExists(backup);
+                        BackupManager.RestoreBackupIfExists(backup, assemblyPath);
                         return false;
                     }
                     BackupManager.SavePatchedFileHash(assemblyPath);
                 } catch {
-                    BackupManager.DeleteBackupIfExists(backup);
+                    BackupManager.RestoreBackupIfExists(backup, assemblyPath);
                     throw;
                 }
             }
@@ -138,13 +138,13 @@ public static class GamePatcher {
     
             try {
                 if (!AssetsFilePatcher.PatchAssetsFile(targetPath, modFolders)) {
-                    BackupManager.DeleteBackupIfExists(backup);
+                    BackupManager.RestoreBackupIfExists(backup, targetPath);
                     ErrorHandler.Handle($"Failed to patch assets file {Path.GetFileName(targetPath)}", null);
                     return false;
                 }
                 BackupManager.SavePatchedFileHash(targetPath);
             } catch {
-                BackupManager.DeleteBackupIfExists(backup);
+                BackupManager.RestoreBackupIfExists(backup, targetPath);
                 throw;
             }
         }
@@ -172,7 +172,7 @@ public static class GamePatcher {
                     File.Copy(xmlFile, target, true);
                     BackupManager.SavePatchedFileHash(target);
                 } catch {
-                    BackupManager.DeleteBackupIfExists(backup);
+                    BackupManager.RestoreBackupIfExists(backup, target);
                     throw;
                 }
                 continue;
@@ -185,13 +185,13 @@ public static class GamePatcher {
 
             try {
                 if (!XmlPatcher.PatchXml(backup2, xmlFile, target)) {
-                    BackupManager.DeleteBackupIfExists(backup2);
+                    BackupManager.RestoreBackupIfExists(backup2, target);
                     ErrorHandler.Handle($"Failed to patch XML file {relPath}", null);
                     return false;
                 }
                 BackupManager.SavePatchedFileHash(target);
             } catch {
-                BackupManager.DeleteBackupIfExists(backup2);
+                BackupManager.RestoreBackupIfExists(backup2, target);
                 throw;
             }
         }
