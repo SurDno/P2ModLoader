@@ -1,3 +1,6 @@
+using System.Linq;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Mono.Cecil;
 using P2ModLoader.Logging;
@@ -13,19 +16,40 @@ public static class MemberRemover {
     }
 
     public static void RemoveMarkedMembers(
-        TypeDefinition originalType,
+        TypeDefinition typeDef,
         string fullTypeName,
+        List<ConstructorDeclarationSyntax> constructorsToRemove,
         List<MethodDeclarationSyntax> methodsToRemove,
         List<PropertyDeclarationSyntax> propertiesToRemove,
         List<FieldDeclarationSyntax> fieldsToRemove,
         List<EventDeclarationSyntax> eventsToRemove,
         List<EventFieldDeclarationSyntax> eventFieldsToRemove) {
-        
-        RemoveMethods(originalType, fullTypeName, methodsToRemove);
-        RemoveProperties(originalType, fullTypeName, propertiesToRemove);
-        RemoveFields(originalType, fullTypeName, fieldsToRemove);
-        RemoveEvents(originalType, fullTypeName, eventsToRemove);
-        RemoveEventFields(originalType, fullTypeName, eventFieldsToRemove);
+
+        RemoveConstructors(typeDef, fullTypeName, constructorsToRemove);
+        RemoveMethods(typeDef, fullTypeName, methodsToRemove);
+        RemoveProperties(typeDef, fullTypeName, propertiesToRemove);
+        RemoveFields(typeDef, fullTypeName, fieldsToRemove);
+        RemoveEvents(typeDef, fullTypeName, eventsToRemove);
+        RemoveEventFields(typeDef, fullTypeName, eventFieldsToRemove);
+    }
+
+    private static void RemoveConstructors(TypeDefinition originalType, string fullTypeName, 
+        List<ConstructorDeclarationSyntax> constructorsToRemove) {
+        foreach (var ctorSyntax in constructorsToRemove) {
+            bool isStatic = ctorSyntax.Modifiers.Any(m => m.ValueText == "static");
+            var methodName = isStatic ? ".cctor" : ".ctor";
+            var paramTypes = ctorSyntax.ParameterList.Parameters
+                .Select(p => p.Type!.ToString()).ToList();
+
+            var methodToRemove = MethodMatcher.FindMatchingMethod(originalType, methodName, paramTypes, false);
+
+            if (methodToRemove != null) {
+                originalType.Methods.Remove(methodToRemove);
+                Logger.Log(LogLevel.Info, $"Removed constructor {(isStatic ? "static" : "")} from type {fullTypeName}");
+            } else {
+                Logger.Log(LogLevel.Warning, $"Could not find constructor {(isStatic ? "static" : "")} to remove from type {fullTypeName}");
+            }
+        }
     }
 
     private static void RemoveMethods(TypeDefinition originalType, string fullTypeName, 

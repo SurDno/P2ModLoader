@@ -53,13 +53,14 @@ public static class AssemblyPatcher {
                 return false;
             }
             
+            var constructors = userRoot.DescendantNodes().OfType<ConstructorDeclarationSyntax>().ToList();
             var methods = userRoot.DescendantNodes().OfType<MethodDeclarationSyntax>().ToList();
             var properties = userRoot.DescendantNodes().OfType<PropertyDeclarationSyntax>().ToList();
             var fields = userRoot.DescendantNodes().OfType<FieldDeclarationSyntax>().ToList();
             var events = userRoot.DescendantNodes().OfType<EventDeclarationSyntax>().ToList();
             var eventFields = userRoot.DescendantNodes().OfType<EventFieldDeclarationSyntax>().ToList();
 
-            var members = methods.Concat<MemberDeclarationSyntax>(properties).Concat(fields).Concat(events).Concat(eventFields).ToList();
+            var members = constructors.Concat<MemberDeclarationSyntax>(methods).Concat(properties).Concat(fields).Concat(events).Concat(eventFields).ToList();
 
             var decompiler = new CSharpDecompiler(dllPath, new DecompilerSettings { ShowXmlDocumentation = false });
 
@@ -177,7 +178,7 @@ public static class AssemblyPatcher {
                         }
                         
                         Logger.Log(LogLevel.Info, $"Updating class {fullTypeName} with new/changed members.");
-                        if (!TryUpdateClassTypeMembers(originalAssembly, fullTypeName, @namespace, classDecl, methods,
+                        if (!TryUpdateClassTypeMembers(originalAssembly, fullTypeName, @namespace, classDecl, methods, constructors,
                                 properties, fields, events, eventFields, userRoot, references, readerParams, decompiledSource, parseOptions))
                             return false;
                     } else {
@@ -273,6 +274,7 @@ public static class AssemblyPatcher {
         NamespaceDeclarationSyntax? @namespace,
         ClassDeclarationSyntax @class,
         List<MethodDeclarationSyntax> methods,
+        List<ConstructorDeclarationSyntax> constructors,
         List<PropertyDeclarationSyntax> properties,
         List<FieldDeclarationSyntax> fields,
         List<EventDeclarationSyntax> events,
@@ -282,12 +284,14 @@ public static class AssemblyPatcher {
         ReaderParameters readerParams,
         string decompiledSource, CSharpParseOptions parseOptions) {
 
+        var constructorsToRemove = constructors.Where(MemberRemover.IsMarkedForRemoval).ToList();
         var methodsToRemove = methods.Where(MemberRemover.IsMarkedForRemoval).ToList();
         var propertiesToRemove = properties.Where(MemberRemover.IsMarkedForRemoval).ToList();
         var fieldsToRemove = fields.Where(MemberRemover.IsMarkedForRemoval).ToList();
         var eventsToRemove = events.Where(MemberRemover.IsMarkedForRemoval).ToList();
         var eventFieldsToRemove = eventFields.Where(MemberRemover.IsMarkedForRemoval).ToList();
         
+        constructors = constructors.Except(constructorsToRemove).ToList();
         methods = methods.Except(methodsToRemove).ToList();
         properties = properties.Except(propertiesToRemove).ToList();
         fields = fields.Except(fieldsToRemove).ToList();
@@ -412,7 +416,7 @@ public static class AssemblyPatcher {
             return false;
         }
         
-        MemberRemover.RemoveMarkedMembers(originalType, fullTypeName, methodsToRemove, 
+        MemberRemover.RemoveMarkedMembers(originalType, fullTypeName, constructorsToRemove, methodsToRemove, 
             propertiesToRemove, fieldsToRemove, eventsToRemove, eventFieldsToRemove);
         
         foreach (var clone in newType.NestedTypes.Select(n => TypeCloner.CloneType(n, originalAssembly.MainModule))) {
@@ -420,6 +424,33 @@ public static class AssemblyPatcher {
             PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
         }
 
+
+        var replacedConstructors = new HashSet<string>();
+
+        foreach (var ctorSyntax in constructors) {
+            bool isStatic = ctorSyntax.Modifiers.Any(SyntaxKind.StaticKeyword);
+            var methodName = isStatic ? ".cctor" : ".ctor";
+            var paramTypes = ctorSyntax.ParameterList.Parameters
+                .Select(p => p.Type!.ToString())
+                .ToList();
+
+            var newMethod = MethodMatcher.FindMatchingMethod(newType, methodName, paramTypes, false);
+            var originalMethod = MethodMatcher.FindMatchingMethod(originalType, methodName, paramTypes, false);
+
+            if (newMethod == null) {
+                Logger.Log(LogLevel.Warning, $"Could not find constructor {(isStatic ? "static" : "")} in the compiled assembly");
+                continue;
+            }
+
+            if (originalMethod == null) {
+                originalType.Methods.Add(MethodCloner.CloneMethod(newMethod, originalAssembly.MainModule));
+                Logger.Log(LogLevel.Info, $"Added new constructor {(isStatic ? "static" : "")} to type {fullTypeName}");
+            } else {
+                replacedConstructors.Add(originalMethod.FullName);
+                MethodCloner.ReplaceMethodBody(originalMethod, newMethod, originalAssembly.MainModule);
+                Logger.Log(LogLevel.Info, $"Replaced constructor {(isStatic ? "static" : "")} in type {fullTypeName}");
+            }
+        }
 
         foreach (var methodSyntax in methods) {
             bool isExplicitImpl = methodSyntax.ExplicitInterfaceSpecifier != null;
