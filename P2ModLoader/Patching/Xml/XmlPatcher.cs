@@ -74,10 +74,12 @@ public static class XmlPatcher {
         if (XNode.DeepEquals(src, backup)) return;
         
         if (!src.HasElements && src.Value != backup.Value) {
-            if (target.Value == src.Value) return;
-            var xpath = XPathCalculator.GetXPathWithIndex(target);
-            Logger.Log(LogLevel.Info, $"Changing content at {xpath} from '{target.Value}' to '{src.Value}'");
-            target.Value = src.Value;
+            if (target.Value != src.Value) {
+                var xpath = XPathCalculator.GetXPathWithIndex(target);
+                Logger.Log(LogLevel.Info, $"Changing content at {xpath} from '{target.Value}' to '{src.Value}'");
+                target.Value = src.Value;
+            }
+            ProcessAttributesBatch(target, src, backup);
             return;
         }
 
@@ -85,11 +87,21 @@ public static class XmlPatcher {
 
         if (srcElements.Count > 1000) {
             ProcessChildrenInBatches(target, backup, srcElements);
-            return;
+        } else {
+            ProcessChildrenOptimized(target, backup, srcElements);
         }
         
-        ProcessChildrenOptimized(target, backup, srcElements);
         ProcessAttributesBatch(target, src, backup);
+        
+        foreach (var baseChild in backup.Elements().ToList()) {
+            var srcChild = FindMatchingNodeUltraFast(src, baseChild);
+            if (srcChild == null) {
+                var targetChild = FindMatchingNodeUltraFast(target, baseChild);
+                if (targetChild != null) {
+                    RemoveElementWithFormatting(targetChild);
+                }
+            }
+        }
     }
     
     private static void ProcessChildrenInBatches(XElement target, XElement backup, List<XElement> srcElements) { 	
@@ -125,6 +137,7 @@ public static class XmlPatcher {
         var targetIdLookup = IdBasedLookupCache.GetValueOrDefault(target, new Dictionary<string, XElement>());
         var backupIdLookup = IdBasedLookupCache.GetValueOrDefault(backup, new Dictionary<string, XElement>());
 
+        XElement? lastProcessedTargetChild = null;
         foreach (var srcChild in elementsWithIds) {
             var idAttr = srcChild.Attribute("id")?.Value;
             var idElement = srcChild.Element("Id")?.Value;
@@ -138,8 +151,10 @@ public static class XmlPatcher {
             if (targetChild != null && backupChild != null) {
                 if (!XNode.DeepEquals(srcChild, backupChild))
                     MergeXmlNodes(targetChild, srcChild, backupChild);
-            } else if (targetChild == null && backupChild == null)
-                target.Add(new XElement(srcChild));
+                lastProcessedTargetChild = targetChild;
+            } else if (targetChild == null && backupChild == null) {
+                lastProcessedTargetChild = AddElementWithFormatting(target, lastProcessedTargetChild, srcChild);
+            }
         }
     }
 
@@ -147,6 +162,7 @@ public static class XmlPatcher {
         var targetChildren = ChildrenByNameCache.GetValueOrDefault(target, target.Elements().ToList());
         var backupChildren = ChildrenByNameCache.GetValueOrDefault(backup, backup.Elements().ToList());
         
+        XElement? lastProcessedTargetChild = null;
         foreach (var srcChild in batch) {
             var targetChild = FindMatchingNodeFast(targetChildren, srcChild);
             var backupChild = FindMatchingNodeFast(backupChildren, srcChild);
@@ -154,13 +170,15 @@ public static class XmlPatcher {
             if (targetChild != null && backupChild != null) {
                 if (!XNode.DeepEquals(srcChild, backupChild))
                     MergeXmlNodes(targetChild, srcChild, backupChild);
+                lastProcessedTargetChild = targetChild;
             } else if (targetChild == null && backupChild == null) {
-                target.Add(new XElement(srcChild));
+                lastProcessedTargetChild = AddElementWithFormatting(target, lastProcessedTargetChild, srcChild);
             }
         }
     }
     
     private static void ProcessChildrenOptimized(XElement target, XElement backup, List<XElement> srcElements) { 	
+        XElement? lastProcessedTargetChild = null;
         foreach (var sourceChild in srcElements) {
             var targetChild = FindMatchingNodeUltraFast(target, sourceChild);
             var baseChild = FindMatchingNodeUltraFast(backup, sourceChild);
@@ -168,8 +186,10 @@ public static class XmlPatcher {
             if (targetChild != null && baseChild != null) {
                 if (!XNode.DeepEquals(sourceChild, baseChild))
                     MergeXmlNodes(targetChild, sourceChild, baseChild);
-            } else if (targetChild == null && baseChild == null) 
-                target.Add(new XElement(sourceChild));
+                lastProcessedTargetChild = targetChild;
+            } else if (targetChild == null && baseChild == null) {
+                lastProcessedTargetChild = AddElementWithFormatting(target, lastProcessedTargetChild, sourceChild);
+            }
         }
     }
     
@@ -177,12 +197,19 @@ public static class XmlPatcher {
         var attributesToUpdate = (from attr in src.Attributes() let baseAttr = backup.Attribute(attr.Name)
             where baseAttr == null || baseAttr.Value != attr.Value select attr).ToList();
 
-        if (attributesToUpdate.Count <= 0) return;
-        
-        foreach (var attr in attributesToUpdate) {
-            Logger.Log(LogLevel.Info, $"Updating attribute {attr.Name} at " +
-                                      $"{XPathCalculator.GetXPathWithIndex(target)} to '{attr.Value}'");
-            target.SetAttributeValue(attr.Name, attr.Value);
+        if (attributesToUpdate.Count > 0) {
+            foreach (var attr in attributesToUpdate) {
+                Logger.Log(LogLevel.Info, $"Updating attribute {attr.Name} at " +
+                                          $"{XPathCalculator.GetXPathWithIndex(target)} to '{attr.Value}'");
+                target.SetAttributeValue(attr.Name, attr.Value);
+            }
+        }
+
+        var attributesToRemove = (from attr in backup.Attributes() let srcAttr = src.Attribute(attr.Name)
+            where srcAttr == null select attr).ToList();
+            
+        foreach (var attr in attributesToRemove) {
+            target.Attribute(attr.Name)?.Remove();
         }
     }
     
@@ -206,5 +233,35 @@ public static class XmlPatcher {
         var sameNameElements = childrenList.Where(e => e.Name == nodeToFind.Name).ToList();
         var indexInSameNameSiblings = nodeToFind.ElementsBeforeSelf(nodeToFind.Name).Count();
         return indexInSameNameSiblings < sameNameElements.Count ? sameNameElements[indexInSameNameSiblings] : null;
+    }
+
+    private static XElement AddElementWithFormatting(XElement parent, XElement? lastProcessedTargetChild, XElement srcChild) {
+        var newElement = new XElement(srcChild);
+        XText? whitespace = null;
+        if (srcChild.PreviousNode is XText textNode && string.IsNullOrWhiteSpace(textNode.Value)) {
+            whitespace = new XText(textNode.Value);
+        }
+
+        if (lastProcessedTargetChild != null) {
+            lastProcessedTargetChild.AddAfterSelf(newElement);
+            if (whitespace != null) {
+                lastProcessedTargetChild.AddAfterSelf(whitespace);
+            }
+        } else {
+            if (whitespace != null) {
+                parent.AddFirst(newElement);
+                parent.AddFirst(whitespace);
+            } else {
+                parent.AddFirst(newElement);
+            }
+        }
+        return newElement;
+    }
+
+    private static void RemoveElementWithFormatting(XElement element) {
+        if (element.PreviousNode is XText textNode && string.IsNullOrWhiteSpace(textNode.Value)) {
+            textNode.Remove();
+        }
+        element.Remove();
     }
 }
