@@ -13,7 +13,7 @@ public static class ReferenceCollector {
 		foreach (var file in Directory.GetFiles(dllDirectory, "*.dll")) {
 			var fileName = Path.GetFileName(file);
 			try {
-				if (dllPath.Contains(fileName)) continue;
+				if (string.Equals(fileName, Path.GetFileName(dllPath), StringComparison.OrdinalIgnoreCase)) continue;
 				var bytes = File.ReadAllBytes(file);
 				references.Add(MetadataReference.CreateFromImage(bytes));
 			} catch (Exception ex) {

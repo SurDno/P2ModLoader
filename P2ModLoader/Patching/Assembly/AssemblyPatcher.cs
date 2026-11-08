@@ -187,6 +187,7 @@ public static class AssemblyPatcher {
                 }
             }
 
+            PostPatchReferenceFixer.CleanUpSelfReferences(originalAssembly.MainModule);
             originalAssembly.Write(dllPath);
             Logger.Log(LogLevel.Info, $"Successfully patched assembly at {dllPath}");
             return true;
@@ -420,8 +421,10 @@ public static class AssemblyPatcher {
             propertiesToRemove, fieldsToRemove, eventsToRemove, eventFieldsToRemove);
         
         foreach (var clone in newType.NestedTypes.Select(n => TypeCloner.CloneType(n, originalAssembly.MainModule))) {
-            originalType.NestedTypes.Add(clone);
-            PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
+            if (originalType.NestedTypes.FirstOrDefault(n => n.Name == clone.Name) == null) {
+                originalType.NestedTypes.Add(clone);
+                PostPatchReferenceFixer.FixReferencesForPatchedType(clone, tempAsmName, originalAssembly.MainModule);
+            }
         }
 
 

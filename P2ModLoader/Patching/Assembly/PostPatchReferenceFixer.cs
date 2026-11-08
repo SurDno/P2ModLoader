@@ -5,10 +5,13 @@ namespace P2ModLoader.Patching.Assembly;
 
 public static class PostPatchReferenceFixer {
     public static void FixReferencesForPatchedType(TypeDefinition type, string tempAsm, ModuleDefinition module) {
+        var selfAsmName = module.Assembly.Name.Name;
         for (var i = module.AssemblyReferences.Count - 1; i >= 0; i--) {
-            if (module.AssemblyReferences[i].Name != tempAsm) continue;
-            module.AssemblyReferences.RemoveAt(i);
-            Logger.Log(LogLevel.Debug, $"Removed assembly reference '{tempAsm}' from module");
+            var refName = module.AssemblyReferences[i].Name;
+            if (refName == tempAsm || refName == selfAsmName) {
+                module.AssemblyReferences.RemoveAt(i);
+                Logger.Log(LogLevel.Debug, $"Removed assembly reference '{refName}' from module");
+            }
         }
 
         foreach (var field in type.Fields.Where(f => f.FieldType.Scope?.Name == tempAsm && f.FieldType.FullName == type.FullName)) {
@@ -109,5 +112,23 @@ public static class PostPatchReferenceFixer {
         }
 
         return null;
+    }
+
+    public static void CleanUpSelfReferences(ModuleDefinition module) {
+        var selfAsmName = module.Assembly.Name.Name;
+
+        foreach (var tr in module.GetTypeReferences()) {
+            if (tr.Scope is AssemblyNameReference anr && anr.Name == selfAsmName) {
+                tr.Scope = module;
+                Logger.Log(LogLevel.Debug, $"Retargeted TypeReference '{tr.FullName}' scope to module");
+            }
+        }
+
+        for (var i = module.AssemblyReferences.Count - 1; i >= 0; i--) {
+            if (module.AssemblyReferences[i].Name == selfAsmName) {
+                module.AssemblyReferences.RemoveAt(i);
+                Logger.Log(LogLevel.Debug, $"Removed self assembly reference '{selfAsmName}' from module");
+            }
+        }
     }
 }

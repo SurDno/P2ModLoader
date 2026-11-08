@@ -61,7 +61,9 @@ public static class GamePatcher {
     }
 
     private static bool TryProcessAssemblies(string modAssemblyPath, Mod mod) { 	
-        foreach (var source in Directory.GetFileSystemEntries(modAssemblyPath)) {
+        var sources = Directory.GetFileSystemEntries(modAssemblyPath);
+        var sortedSources = SortEntriesByDependency(sources);
+        foreach (var source in sortedSources) {
             var name = Path.GetFileName(source);
             var target = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.FullManagedPath, name);
                 
@@ -97,6 +99,66 @@ public static class GamePatcher {
             }
         }
         return true;
+    }
+    
+    private static List<string> SortEntriesByDependency(IEnumerable<string> sources) {
+        var entries = sources.ToList();
+        var targetPaths = new Dictionary<string, string>();
+        var definitions = new Dictionary<string, Mono.Cecil.AssemblyDefinition>();
+
+        foreach (var source in entries) {
+            var name = Path.GetFileName(source);
+            var target = Path.Combine(SettingsHolder.InstallPath!, SettingsHolder.SelectedInstall!.FullManagedPath, name);
+            var assemblyPath = Directory.Exists(source) ? target + ".dll" : target;
+            targetPaths[source] = assemblyPath;
+
+            try {
+                if (File.Exists(assemblyPath)) {
+                    var def = Mono.Cecil.AssemblyDefinition.ReadAssembly(assemblyPath);
+                    definitions[source] = def;
+                }
+            } catch {
+                // Ignore if it fails to read
+            }
+        }
+
+        var sorted = new List<string>();
+        var visited = new HashSet<string>();
+        var visiting = new HashSet<string>();
+
+        void Visit(string source) {
+            if (visited.Contains(source)) return;
+            if (visiting.Contains(source)) return; // cycle
+
+            visiting.Add(source);
+
+            if (definitions.TryGetValue(source, out var def)) {
+                // Find any other sources that this source depends on
+                foreach (var otherSource in entries) {
+                    if (otherSource == source) continue;
+                    var otherTarget = targetPaths[otherSource];
+                    var otherAssemblyName = Path.GetFileNameWithoutExtension(otherTarget);
+                    
+                    if (def.MainModule.AssemblyReferences.Any(r => r.Name.Equals(otherAssemblyName, StringComparison.OrdinalIgnoreCase))) {
+                        Visit(otherSource);
+                    }
+                }
+            }
+
+            visiting.Remove(source);
+            visited.Add(source);
+            sorted.Add(source);
+        }
+
+        foreach (var source in entries) {
+            Visit(source);
+        }
+
+        foreach (var def in definitions.Values) {
+            def.Dispose();
+        }
+
+        return sorted;
     }
     
     private static bool PatchAssemblyWithCodeFiles(string directory, string assemblyPath, Mod mod) { 	
