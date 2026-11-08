@@ -35,13 +35,18 @@ public static class BackupManager {
 			}
 		}
 
-		RestoreFiles(matching);
-		if (restoreModified == true) {
-			RestoreFiles(modified ?? []);
-			Logger.Log(LogLevel.Info, $"User chose to restore all files including potentially modified ones.");
-		} else if (restoreModified == false) {
-			DeleteBackups(modified ?? matching);
-			Logger.Log(LogLevel.Info, $"User chose to keep modified files.");
+		if (metadata == null && restoreModified == false) {
+			DeleteBackups(matching);
+			Logger.Log(LogLevel.Info, $"User chose to delete backups (metadata missing).");
+		} else {
+			RestoreFiles(matching);
+			if (restoreModified == true) {
+				RestoreFiles(modified ?? []);
+				Logger.Log(LogLevel.Info, $"User chose to restore all files including potentially modified ones.");
+			} else if (restoreModified == false) {
+				DeleteBackups(modified ?? []);
+				Logger.Log(LogLevel.Info, $"User chose to keep modified files.");
+			}
 		}
 
 		RemoveAddedFiles();
@@ -80,7 +85,10 @@ public static class BackupManager {
 		var relativePath = Path.GetRelativePath(SettingsHolder.InstallPath, filePath);
 		var hash = IntegrityChecker.ComputeFileHash(filePath);
 		
-		var metadata = LoadMetadata() ?? new BackupMetadata { BackupDate = DateTime.UtcNow };
+		var metadata = LoadMetadata() ?? new BackupMetadata { 
+			BackupDate = DateTime.UtcNow,
+			FileHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) 
+		};
 		metadata.FileHashes[relativePath] = hash;
 		SaveMetadata(metadata);
 		
@@ -97,7 +105,11 @@ public static class BackupManager {
 		if (!File.Exists(MetadataPath)) return null;
 		
 		try {
-			return JsonSerializer.Deserialize<BackupMetadata>(File.ReadAllText(MetadataPath));
+			var metadata = JsonSerializer.Deserialize<BackupMetadata>(File.ReadAllText(MetadataPath));
+			if (metadata != null) {
+				metadata.FileHashes = new Dictionary<string, string>(metadata.FileHashes, StringComparer.OrdinalIgnoreCase);
+			}
+			return metadata;
 		} catch (Exception ex) {
 			Logger.Log(LogLevel.Error, $"Failed to load backup metadata: {ex.Message}");
 			return null;
