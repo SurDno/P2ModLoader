@@ -201,7 +201,9 @@ public static class AssetsFilePatcher {
                         }
                     }
                 }
-            } else if (_assetsByName != null) {
+            }
+
+            if (_assetsByName != null) {
                 var nameLower = assetName.ToLowerInvariant();
                 if (_assetsByName.TryGetValue((handler.ClassId, nameLower), out var assetInfo)) {
                     Logger.Log(LogLevel.Info, $"Found name match for '{assetName}'");
