@@ -220,7 +220,7 @@ public class InstallsTab : BaseTab {
         }
 
         try {
-            Process.Start("explorer.exe", $"/select,\"{logPath}\"");
+            Process.Start(new ProcessStartInfo(logPath) { UseShellExecute = true });
         } catch (Exception ex) {
             MessageBox.Show($"Failed to open game log:\n{ex.Message}", "Error",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);

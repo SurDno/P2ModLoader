@@ -27,7 +27,7 @@ public class SettingsTab : BaseTab {
             Height = 32,
             Dock = DockStyle.Right
         };
-        modLoaderLogButton.Click += (_, _) => Process.Start("explorer.exe", Logger.GetLogPath());
+        modLoaderLogButton.Click += (_, _) => Process.Start(new ProcessStartInfo(Logger.GetLogPath()) { UseShellExecute = true });
 
         logButtonsPanel.Controls.AddRange([modLoaderLogButton]);
         
